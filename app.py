@@ -71,6 +71,31 @@ st.markdown("""
         color: #9090aa;
     }
 
+    /* ---- Questionnaire ---- */
+    .questionnaire-title {
+        text-align: center;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 48px 0 4px;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .questionnaire-sub {
+        text-align: center;
+        color: #4e4e6e;
+        font-size: 0.9rem;
+        margin-bottom: 32px;
+    }
+    .q-section-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #5046e5;
+        margin-bottom: 6px;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+
     /* ---- Search Header ---- */
     .search-title {
         text-align: center;
@@ -155,6 +180,14 @@ st.markdown("""
     .source-tag {
         color: #3e3e58;
     }
+    .source-badge {
+        background: #16162a;
+        color: #6a6a88;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 500;
+    }
 
     /* ---- Hero Result ---- */
     .hero-result {
@@ -186,6 +219,33 @@ st.markdown("""
         color: #3a3a54;
         margin: 32px 0 14px;
         font-family: 'Space Grotesk', sans-serif;
+    }
+
+    /* ---- Explanation Box ---- */
+    .explain-box {
+        background: #0c0c18;
+        border: 1px solid #1a1a30;
+        border-left: 3px solid #5046e5;
+        border-radius: 6px;
+        padding: 10px 16px;
+        margin: 4px 0 10px;
+        font-size: 0.78rem;
+        color: #7a7a98;
+        line-height: 1.5;
+    }
+    .explain-box .reason {
+        margin: 2px 0;
+    }
+
+    /* ---- Conflict Warning ---- */
+    .conflict-banner {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: 8px;
+        padding: 12px 20px;
+        margin: 12px 0 20px;
+        color: #d4a036;
+        font-size: 0.85rem;
     }
 
     /* ---- Buttons ---- */
@@ -265,6 +325,13 @@ USERS = [
     {"name": "User 5", "color": "#f59e0b"},
 ]
 
+# --- Questionnaire Options ---
+INTEREST_OPTIONS = ["Tech", "Health", "Finance", "Sports", "Entertainment"]
+DEPTH_OPTIONS = ["quick", "detailed", "research"]
+RECENCY_OPTIONS = ["last week", "last month", "last year", "any"]
+SOURCE_OPTIONS = ["official", "blog", "news", "forum"]
+AVOID_OPTIONS = ["Politics", "Gossip", "Ads"]
+
 # --- Engine init ---
 if 'engine' not in st.session_state:
     with st.status("Initializing engine...", expanded=True) as status:
@@ -277,25 +344,27 @@ if 'engine' not in st.session_state:
 
         st.session_state.engine = engine
         st.session_state.current_user = None
+        st.session_state.questionnaire_done = False
         st.session_state.feedback_count = 0
         st.session_state.num_results_pers = 10
         st.session_state.num_results_base = 10
-        st.session_state.user_profiles = {
-            u["name"]: np.zeros(engine.index.d) for u in USERS
-        }
+        st.session_state.user_profiles = {u["name"]: np.zeros(engine.index.d) for u in USERS}
+        st.session_state.user_prefs = {}      # questionnaire answers per user
+        st.session_state.liked_docs = {}      # liked document texts per user
         status.update(label="Ready", state="complete", expanded=False)
 
 # ================================================================
 #  SCREEN 1 — User Selection
 # ================================================================
 if st.session_state.current_user is None:
+    st.session_state.questionnaire_done = False
     st.markdown("<h1 class='landing-title'>Adaptive Search Engine</h1>", unsafe_allow_html=True)
     st.markdown("<p class='landing-sub'>A retrieval system that adapts search results based on user behavior and interests</p>", unsafe_allow_html=True)
 
     cols = st.columns([1, 3, 1])
     with cols[1]:
         inner_cols = st.columns(5)
-        for i, user in enumerate(inner_cols):
+        for i in range(5):
             with inner_cols[i]:
                 u = USERS[i]
                 initials = u["name"].replace("User ", "U")
@@ -307,15 +376,104 @@ if st.session_state.current_user is None:
                 """, unsafe_allow_html=True)
                 if st.button("Select", key=f"sel_{i}", use_container_width=True):
                     st.session_state.current_user = u
+                    # Check if this user already completed questionnaire
+                    if u["name"] in st.session_state.user_prefs:
+                        st.session_state.questionnaire_done = True
                     st.rerun()
 
     st.stop()
 
 # ================================================================
-#  SCREEN 2 — Search
+#  SCREEN 2 — Initial Questionnaire (shown once per user)
 # ================================================================
 active_user = st.session_state.current_user
+
+if not st.session_state.questionnaire_done and active_user["name"] not in st.session_state.user_prefs:
+    st.markdown(f"<h1 class='questionnaire-title'>Set up {active_user['name']}'s preferences</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='questionnaire-sub'>This helps us personalize your search results from the start</p>", unsafe_allow_html=True)
+
+    _, form_col, _ = st.columns([1, 2.5, 1])
+    with form_col:
+        with st.form("questionnaire_form"):
+            st.markdown("<div class='q-section-label'>Topics of Interest</div>", unsafe_allow_html=True)
+            interests = st.multiselect(
+                "Select your interests",
+                INTEREST_OPTIONS,
+                default=["Tech"],
+                label_visibility="collapsed"
+            )
+
+            st.markdown("<div class='q-section-label' style='margin-top:16px;'>Search Depth</div>", unsafe_allow_html=True)
+            depth = st.radio(
+                "How detailed should results be?",
+                DEPTH_OPTIONS,
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+
+            st.markdown("<div class='q-section-label' style='margin-top:16px;'>Recency Preference</div>", unsafe_allow_html=True)
+            recency = st.radio(
+                "How recent?",
+                RECENCY_OPTIONS,
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+
+            st.markdown("<div class='q-section-label' style='margin-top:16px;'>Preferred Source Type</div>", unsafe_allow_html=True)
+            source_pref = st.radio(
+                "Source type",
+                SOURCE_OPTIONS,
+                horizontal=True,
+                label_visibility="collapsed"
+            )
+
+            st.markdown("<div class='q-section-label' style='margin-top:16px;'>Topics to Avoid</div>", unsafe_allow_html=True)
+            avoid = st.multiselect(
+                "Select topics to de-prioritize",
+                AVOID_OPTIONS,
+                default=[],
+                label_visibility="collapsed"
+            )
+
+            col_submit, col_skip = st.columns(2)
+            submitted = col_submit.form_submit_button("Apply Preferences", use_container_width=True)
+            skipped = col_skip.form_submit_button("Skip", use_container_width=True)
+
+            if submitted:
+                prefs = {
+                    "interests": interests,
+                    "depth": depth,
+                    "recency": recency,
+                    "source_pref": source_pref,
+                    "avoid": avoid,
+                }
+                st.session_state.user_prefs[active_user["name"]] = prefs
+                st.session_state.liked_docs[active_user["name"]] = []
+
+                # Build initial profile vector from questionnaire
+                initial_vec = st.session_state.engine.build_initial_profile(interests, depth, source_pref)
+                st.session_state.user_profiles[active_user["name"]] = initial_vec
+
+                st.session_state.questionnaire_done = True
+                st.rerun()
+
+            if skipped:
+                st.session_state.user_prefs[active_user["name"]] = {
+                    "interests": [], "depth": "detailed", "recency": "any",
+                    "source_pref": "official", "avoid": []
+                }
+                st.session_state.liked_docs[active_user["name"]] = []
+                st.session_state.questionnaire_done = True
+                st.rerun()
+
+    st.stop()
+
+# ================================================================
+#  SCREEN 3 — Search Interface
+# ================================================================
 profile_vec = st.session_state.user_profiles[active_user["name"]]
+user_prefs = st.session_state.user_prefs.get(active_user["name"], {})
+liked_docs = st.session_state.liked_docs.get(active_user["name"], [])
 
 # --- Top bar ---
 top1, top2, top3 = st.columns([1.5, 3, 1])
@@ -342,24 +500,58 @@ with center_col:
 # --- Results ---
 if query:
     has_profile = np.linalg.norm(profile_vec) > 0
-    p_weight = 0.5 if has_profile else 0.0
+    avoid_topics = user_prefs.get("avoid", [])
+    preferred_sources = [user_prefs.get("source_pref", "")] if user_prefs.get("source_pref") else None
+    recency_pref = user_prefs.get("recency", "any")
 
-    results_p = st.session_state.engine.search(query, profile_vec=profile_vec, personalization_weight=p_weight)
+    # Topic mismatch detection
+    has_conflict, p_weight = st.session_state.engine.detect_topic_conflict(query, avoid_topics)
+    if not has_profile:
+        p_weight = 0.0
+
+    # Recency weight based on preference
+    recency_weight_map = {"last week": 0.15, "last month": 0.10, "last year": 0.05, "any": 0.0}
+    r_weight = recency_weight_map.get(recency_pref, 0.0)
+
+    # Source weight
+    s_weight = 0.1 if preferred_sources else 0.0
+
+    # Conflict banner
+    if has_conflict:
+        conflict_topic = [t for t in st.session_state.engine.classify_text(query) if t in avoid_topics]
+        topic_str = ", ".join(conflict_topic)
+        st.markdown(f"""
+        <div class='conflict-banner'>
+            Personalization reduced — your query touches a topic you prefer to avoid ({topic_str}).
+            Showing more neutral results.
+        </div>
+        """, unsafe_allow_html=True)
+
+    results_p = st.session_state.engine.search(
+        query, profile_vec=profile_vec, personalization_weight=p_weight,
+        preferred_sources=preferred_sources, recency_weight=r_weight, source_weight=s_weight
+    )
     results_b = st.session_state.engine.search(query, profile_vec=None, personalization_weight=0.0)
 
     # --- Hero ---
     hero = results_p.iloc[0]
+    hero_source = hero.get('source_type', 'general')
     st.markdown(f"""
     <div class='hero-result'>
         <h2>{hero['title']}</h2>
         <div class='result-meta' style='margin-bottom:12px;'>
             <span class='relevance-tag'>{int(hero['score']*100)}% relevance</span>
-            <span class='source-tag'>MS MARCO</span>
+            <span class='source-badge'>{hero_source}</span>
             <span class='source-tag'>{'Personalized' if has_profile else 'Baseline'}</span>
         </div>
         <p class='content'>{hero['content']}</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Explain hero result
+    hero_reasons = st.session_state.engine.explain_result(hero, query, liked_docs)
+    reasons_html = "".join(f"<div class='reason'>· {r}</div>" for r in hero_reasons)
+    st.markdown(f"<div class='explain-box'>{reasons_html}</div>", unsafe_allow_html=True)
 
     # --- Row renderer ---
     def render_result_list(df, section_title, key_prefix):
@@ -368,12 +560,12 @@ if query:
         limit_key = f"num_results_{key_prefix}"
         if limit_key not in st.session_state:
             st.session_state[limit_key] = 10
-        
+
         limit = st.session_state[limit_key]
         items = df.head(limit)
 
         for rank, (idx, row) in enumerate(items.iterrows(), 1):
-            # Render the styled row via HTML
+            source_type = row.get('source_type', 'general')
             st.markdown(f"""
             <div class='result-row'>
                 <div class='result-rank'>{rank:02d}</div>
@@ -382,13 +574,19 @@ if query:
                     <div class='result-snippet'>{row['content'][:200]}...</div>
                     <div class='result-meta'>
                         <span class='relevance-tag'>{int(row['score']*100)}%</span>
-                        <span class='source-tag'>MS MARCO</span>
+                        <span class='source-badge'>{source_type}</span>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Feedback buttons below each row (native Streamlit)
+            # Explainability (for personalized results)
+            if key_prefix == "pers":
+                reasons = st.session_state.engine.explain_result(row, query, liked_docs)
+                reasons_html = "".join(f"<div class='reason'>· {r}</div>" for r in reasons)
+                st.markdown(f"<div class='explain-box'>{reasons_html}</div>", unsafe_allow_html=True)
+
+            # Feedback buttons
             _, fb_col, _ = st.columns([6, 1.2, 6])
             with fb_col:
                 b1, b2 = st.columns(2)
@@ -397,6 +595,10 @@ if query:
                     st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
                         st.session_state.user_profiles[active_user["name"]], [vec], []
                     )
+                    # Track liked doc text for explainability
+                    if active_user["name"] not in st.session_state.liked_docs:
+                        st.session_state.liked_docs[active_user["name"]] = []
+                    st.session_state.liked_docs[active_user["name"]].append(row['content'])
                     st.session_state.feedback_count += 1
                     st.rerun()
                 if b2.button(":material/thumb_down:", key=f"{key_prefix}_dn_{idx}"):
@@ -406,15 +608,15 @@ if query:
                     )
                     st.session_state.feedback_count += 1
                     st.rerun()
-        
-        # Show More Button
+
+        # Show More
         if len(df) > limit:
             _, more_col, _ = st.columns([5, 2, 5])
-            if more_col.button(f"Show More Results", key=f"more_{key_prefix}", use_container_width=True):
+            if more_col.button("Show More Results", key=f"more_{key_prefix}", use_container_width=True):
                 st.session_state[limit_key] += 10
                 st.rerun()
 
-    # Show personalized results only if user has given feedback
+    # Show personalized results only if user has a profile
     if has_profile:
         render_result_list(results_p, "Adapted for you", "pers")
 
