@@ -389,6 +389,13 @@ if st.session_state.current_user is None:
 active_user = st.session_state.current_user
 
 if not st.session_state.questionnaire_done and active_user["name"] not in st.session_state.user_prefs:
+    # --- Top bar for questionnaire ---
+    q_top_cols = st.columns([0.1, 0.9])
+    with q_top_cols[0]:
+        if st.button(":material/arrow_back:", key="q_back_btn", help="Go back to user selection"):
+            st.session_state.current_user = None
+            st.rerun()
+
     st.markdown(f"<h1 class='questionnaire-title'>Set up {active_user['name']}'s preferences</h1>", unsafe_allow_html=True)
     st.markdown("<p class='questionnaire-sub'>This helps us personalize your search results from the start</p>", unsafe_allow_html=True)
 
@@ -476,17 +483,23 @@ user_prefs = st.session_state.user_prefs.get(active_user["name"], {})
 liked_docs = st.session_state.liked_docs.get(active_user["name"], [])
 
 # --- Top bar ---
-top1, top2, top3 = st.columns([1.5, 3, 1])
-with top1:
+top_back, top_user, top_spacer, top_switch = st.columns([0.5, 2, 4, 1.2])
+with top_back:
+    if st.button(":material/arrow_back:", key="back_btn", help="Go back to user selection"):
+        st.session_state.current_user = None
+        st.session_state.questionnaire_done = False
+        st.rerun()
+with top_user:
     st.markdown(f"""
     <div class='topbar-badge'>
         <span class='topbar-dot' style='background:{active_user["color"]};'></span>
         {active_user["name"]}
     </div>
     """, unsafe_allow_html=True)
-with top3:
+with top_switch:
     if st.button("Switch User"):
         st.session_state.current_user = None
+        st.session_state.questionnaire_done = False
         st.rerun()
 
 # --- Search area ---
