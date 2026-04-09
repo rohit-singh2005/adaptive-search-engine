@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from ir_engine import IREngine
-import time
 import os
 
 # --- Page Config ---
@@ -11,254 +10,323 @@ st.set_page_config(page_title="Adaptive Search Engine", layout="wide", page_icon
 # --- Custom Styling ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
     .stApp {
-        background: #0a0a12;
-        color: #d0d0e0;
+        background: #08080f;
+        color: #c8c8d8;
         font-family: 'Inter', sans-serif;
     }
 
     h1, h2, h3 {
         font-family: 'Space Grotesk', sans-serif;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }
 
-    /* ---------- User Selection Screen ---------- */
-    .user-select-title {
+    /* ---- User Selection Screen ---- */
+    .landing-title {
         text-align: center;
-        font-size: 2.8rem;
+        font-size: 2.6rem;
+        font-weight: 700;
         color: #ffffff;
-        margin-top: 60px;
+        margin: 80px 0 6px;
         font-family: 'Space Grotesk', sans-serif;
     }
-    .user-select-sub {
+    .landing-sub {
         text-align: center;
-        color: #5a5a7a;
-        font-size: 1.05rem;
-        margin-bottom: 48px;
+        color: #4e4e6e;
+        font-size: 1rem;
+        margin-bottom: 56px;
+        font-weight: 400;
     }
 
-    .user-avatar-card {
-        background: #12121f;
-        border: 2px solid #1e1e35;
-        border-radius: 16px;
-        padding: 28px 16px 20px;
+    .avatar-card {
+        background: #0e0e1a;
+        border: 1.5px solid #1a1a2e;
+        border-radius: 14px;
+        padding: 32px 16px 24px;
         text-align: center;
         transition: all 0.25s ease;
-        cursor: pointer;
     }
-    .user-avatar-card:hover {
-        border-color: #6C63FF;
-        box-shadow: 0 0 24px rgba(108, 99, 255, 0.15);
-        transform: translateY(-4px);
+    .avatar-card:hover {
+        border-color: #5046e5;
+        box-shadow: 0 0 28px rgba(80, 70, 229, 0.1);
+        transform: translateY(-3px);
     }
-    .user-avatar-emoji {
-        font-size: 3rem;
-        margin-bottom: 8px;
+    .avatar-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        margin: 0 auto 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
     }
-    .user-avatar-name {
-        font-size: 1rem;
+    .avatar-name {
+        font-size: 0.95rem;
         font-weight: 600;
-        color: #c0c0d8;
+        color: #9090aa;
     }
 
-    /* ---------- Search Bar Area ---------- */
-    .search-header {
+    /* ---- Search Header ---- */
+    .search-title {
         text-align: center;
-        padding: 48px 0 8px;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 36px 0 2px;
+        font-family: 'Space Grotesk', sans-serif;
     }
-    .search-header h1 {
-        font-size: 2.2rem;
-        color: #6C63FF;
-        margin-bottom: 0;
-    }
-    .search-header p {
-        color: #4a4a6a;
-        font-size: 0.95rem;
-        margin-top: 4px;
+    .search-subtitle {
+        text-align: center;
+        color: #3e3e58;
+        font-size: 0.85rem;
+        margin-bottom: 28px;
     }
 
     .stTextInput>div>div>input {
-        background-color: #12121f !important;
-        color: #d0d0e0 !important;
-        border: 2px solid #1e1e35 !important;
-        border-radius: 14px !important;
+        background-color: #0e0e1a !important;
+        color: #c8c8d8 !important;
+        border: 1.5px solid #1c1c30 !important;
+        border-radius: 12px !important;
         padding: 14px 20px !important;
-        font-size: 1.05rem !important;
-        transition: border-color 0.2s ease !important;
+        font-size: 1rem !important;
     }
     .stTextInput>div>div>input:focus {
-        border-color: #6C63FF !important;
-        box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15) !important;
+        border-color: #5046e5 !important;
+        box-shadow: 0 0 0 2px rgba(80, 70, 229, 0.12) !important;
     }
 
-    /* ---------- Results ---------- */
-    .hero-card {
-        background: linear-gradient(135deg, #12121f 0%, #16162a 60%, rgba(108, 99, 255, 0.08) 100%);
-        border-radius: 16px;
-        padding: 40px 48px;
-        margin: 24px 0 32px;
-        border-left: 5px solid #6C63FF;
+    /* ---- Result Row ---- */
+    .result-row {
+        background: #0e0e1a;
+        border: 1px solid #16162a;
+        border-radius: 10px;
+        padding: 20px 28px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+        transition: all 0.2s ease;
     }
-    .hero-card h2 {
-        color: #e8e8f0;
-        font-size: 1.8rem;
-        margin: 0 0 8px;
+    .result-row:hover {
+        border-color: #2a2a48;
+        background: #101020;
     }
-    .hero-card .hero-meta {
-        margin: 8px 0 14px;
+    .result-rank {
+        color: #2e2e4a;
+        font-size: 0.8rem;
+        font-weight: 600;
+        min-width: 28px;
+        padding-top: 2px;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+    .result-body {
+        flex: 1;
+        min-width: 0;
+    }
+    .result-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #d8d8ee;
+        margin-bottom: 6px;
+        line-height: 1.35;
+    }
+    .result-snippet {
+        font-size: 0.88rem;
+        color: #6a6a84;
+        line-height: 1.55;
+        margin-bottom: 8px;
+    }
+    .result-meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 0.78rem;
+    }
+    .relevance-tag {
+        color: #00c896;
+        font-weight: 600;
+        font-size: 0.82rem;
+    }
+    .source-tag {
+        color: #3e3e58;
     }
 
-    .match-percent {
-        color: #00d4aa;
-        font-weight: 700;
+    /* ---- Hero Result ---- */
+    .hero-result {
+        background: linear-gradient(135deg, #0e0e1a 0%, #111126 70%, rgba(80, 70, 229, 0.06) 100%);
+        border: 1px solid #1c1c36;
+        border-left: 4px solid #5046e5;
+        border-radius: 12px;
+        padding: 32px 36px;
+        margin: 20px 0 28px;
+    }
+    .hero-result h2 {
+        color: #e8e8f4;
+        font-size: 1.5rem;
+        margin: 0 0 10px;
+    }
+    .hero-result p.content {
+        color: #8888a4;
         font-size: 1rem;
+        line-height: 1.7;
+        max-width: 860px;
     }
 
-    /* Result cards */
-    [data-testid="stContainer"] {
-        background: #12121f !important;
-        border: 1px solid #1e1e35 !important;
-        border-radius: 12px !important;
-        transition: all 0.25s ease !important;
+    /* ---- Section Header ---- */
+    .section-header {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #3a3a54;
+        margin: 32px 0 14px;
+        font-family: 'Space Grotesk', sans-serif;
     }
-    [data-testid="stContainer"]:hover {
-        border-color: rgba(108, 99, 255, 0.35) !important;
-        box-shadow: 0 4px 16px rgba(108, 99, 255, 0.08) !important;
+
+    /* ---- Buttons ---- */
+    .stButton>button {
+        background-color: transparent !important;
+        color: #5a5a74 !important;
+        border: 1px solid #1c1c30 !important;
+        border-radius: 6px !important;
+        padding: 1px 8px !important;
+        font-size: 0.75rem !important;
+        transition: all 0.15s ease !important;
+    }
+    .stButton>button:hover {
+        background-color: #5046e5 !important;
+        border-color: #5046e5 !important;
+        color: white !important;
     }
 
     [data-testid="stHorizontalBlock"] {
         gap: 0rem !important;
     }
 
-    /* Buttons */
-    .stButton>button {
-        background-color: transparent !important;
-        color: #7a7a9a !important;
-        border: 1px solid #1e1e35 !important;
-        border-radius: 8px !important;
-        padding: 2px 10px !important;
-        font-size: 0.8rem !important;
-        transition: all 0.2s ease !important;
+    /* ---- Top Bar ---- */
+    .topbar-badge {
+        background: #0e0e1a;
+        border: 1px solid #1a1a2e;
+        border-radius: 8px;
+        padding: 5px 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: #8888a4;
     }
-    .stButton>button:hover {
-        background-color: #6C63FF !important;
-        border-color: #6C63FF !important;
-        color: white !important;
+    .topbar-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
     }
 
-    /* Empty state */
+    /* ---- Empty State ---- */
     .empty-state {
         text-align: center;
         margin-top: 100px;
     }
-    .empty-state .icon { font-size: 3.5rem; margin-bottom: 12px; }
-    .empty-state h3 { color: #3a3a58; }
-    .empty-state p { color: #2e2e48; font-size: 0.9rem; }
+    .empty-state h3 { color: #2a2a44; font-size: 1.1rem; }
+    .empty-state p { color: #1e1e38; font-size: 0.85rem; margin-top: 4px; }
 
-    /* Top bar user badge */
-    .user-badge {
-        background: #12121f;
-        border: 1px solid #1e1e35;
-        border-radius: 10px;
-        padding: 6px 14px;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.9rem;
-        color: #a0a0c0;
+    /* ---- Feedback bar ---- */
+    .feedback-bar {
+        text-align: center;
+        color: #2a2a44;
+        font-size: 0.8rem;
+        margin-top: 36px;
+        padding: 10px;
+        border-top: 1px solid #12121f;
     }
-    .user-badge .badge-avatar { font-size: 1.2rem; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- User Definitions ---
+# --- User definitions ---
 USERS = [
-    {"name": "User 1", "avatar": "👤"},
-    {"name": "User 2", "avatar": "👩"},
-    {"name": "User 3", "avatar": "👨"},
-    {"name": "User 4", "avatar": "🧑"},
-    {"name": "User 5", "avatar": "👩‍💻"},
+    {"name": "User 1", "color": "#5046e5"},
+    {"name": "User 2", "color": "#0ea5e9"},
+    {"name": "User 3", "color": "#8b5cf6"},
+    {"name": "User 4", "color": "#ec4899"},
+    {"name": "User 5", "color": "#f59e0b"},
 ]
 
-# --- Session State / Engine Initialization ---
+# --- Engine init ---
 if 'engine' not in st.session_state:
-    with st.status("🔍 Initializing Adaptive Search Engine...", expanded=True) as status:
+    with st.status("Initializing engine...", expanded=True) as status:
         st.write("Loading IR Engine...")
         engine = IREngine(subset_size=5000)
-
-        st.write("Checking for cached MS MARCO data...")
+        st.write("Loading MS MARCO data...")
         engine.load_data()
-
         st.write("Building vector index...")
         engine.build_index()
 
         st.session_state.engine = engine
         st.session_state.current_user = None
         st.session_state.feedback_count = 0
-
-        # Per-user profile vectors (persist across searches within session)
         st.session_state.user_profiles = {
             u["name"]: np.zeros(engine.index.d) for u in USERS
         }
-        status.update(label="✅ Engine ready!", state="complete", expanded=False)
+        status.update(label="Ready", state="complete", expanded=False)
 
 # ================================================================
 #  SCREEN 1 — User Selection
 # ================================================================
 if st.session_state.current_user is None:
-    st.markdown("<h1 class='user-select-title'>Adaptive Search Engine</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='user-select-sub'>A retrieval system that adapts search results based on user behavior and interests</p>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#3a3a58; margin-bottom:40px; font-size:0.95rem;'>Select a user to begin — each profile learns independently from your feedback</p>", unsafe_allow_html=True)
+    st.markdown("<h1 class='landing-title'>Adaptive Search Engine</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='landing-sub'>A retrieval system that adapts search results based on user behavior and interests</p>", unsafe_allow_html=True)
 
-    cols = st.columns([1, 1, 1, 1, 1])
-    for i, user in enumerate(USERS):
-        with cols[i]:
-            st.markdown(f"""
-            <div class='user-avatar-card'>
-                <div class='user-avatar-emoji'>{user['avatar']}</div>
-                <div class='user-avatar-name'>{user['name']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(f"Select", key=f"sel_{i}", use_container_width=True):
-                st.session_state.current_user = user
-                st.rerun()
+    cols = st.columns([1, 3, 1])
+    with cols[1]:
+        inner_cols = st.columns(5)
+        for i, user in enumerate(inner_cols):
+            with inner_cols[i]:
+                u = USERS[i]
+                initials = u["name"].replace("User ", "U")
+                st.markdown(f"""
+                <div class='avatar-card'>
+                    <div class='avatar-icon' style='background:{u["color"]};'>{initials}</div>
+                    <div class='avatar-name'>{u["name"]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Select", key=f"sel_{i}", use_container_width=True):
+                    st.session_state.current_user = u
+                    st.rerun()
 
     st.stop()
 
 # ================================================================
-#  SCREEN 2 — Search Interface
+#  SCREEN 2 — Search
 # ================================================================
 active_user = st.session_state.current_user
 profile_vec = st.session_state.user_profiles[active_user["name"]]
 
-# --- Top Bar ---
-top1, top2, top3 = st.columns([1, 3, 1])
+# --- Top bar ---
+top1, top2, top3 = st.columns([1.5, 3, 1])
 with top1:
     st.markdown(f"""
-    <div class='user-badge'>
-        <span class='badge-avatar'>{active_user['avatar']}</span>
-        <span>{active_user['name']}</span>
+    <div class='topbar-badge'>
+        <span class='topbar-dot' style='background:{active_user["color"]};'></span>
+        {active_user["name"]}
     </div>
     """, unsafe_allow_html=True)
 with top3:
-    if st.button("Switch User 🔄"):
+    if st.button("Switch User"):
         st.session_state.current_user = None
         st.rerun()
 
-# --- Search Header ---
-st.markdown("""
-<div class='search-header'>
-    <h1>🔍 Adaptive Search Engine</h1>
-    <p>Results adapt in real-time based on your feedback</p>
-</div>
-""", unsafe_allow_html=True)
+# --- Search area ---
+st.markdown("<div class='search-title'>Adaptive Search Engine</div>", unsafe_allow_html=True)
+st.markdown("<div class='search-subtitle'>Results personalize as you provide relevance feedback</div>", unsafe_allow_html=True)
 
-# --- Search Input ---
 _, center_col, _ = st.columns([1, 3, 1])
 with center_col:
-    query = st.text_input("", placeholder="Search the MS MARCO collection...", label_visibility="collapsed")
+    query = st.text_input("", placeholder="Search MS MARCO collection...", label_visibility="collapsed")
 
 # --- Results ---
 if query:
@@ -268,64 +336,74 @@ if query:
     results_p = st.session_state.engine.search(query, profile_vec=profile_vec, personalization_weight=p_weight)
     results_b = st.session_state.engine.search(query, profile_vec=None, personalization_weight=0.0)
 
-    # --- Hero Result ---
+    # --- Hero ---
     hero = results_p.iloc[0]
     st.markdown(f"""
-    <div class="hero-card">
+    <div class='hero-result'>
         <h2>{hero['title']}</h2>
-        <div class="hero-meta">
-            <span class="match-percent">{int(hero['score']*100)}% Relevance</span>
-            &nbsp;·&nbsp; MS MARCO &nbsp;·&nbsp; {'Personalized' if has_profile else 'Baseline'} Ranking
+        <div class='result-meta' style='margin-bottom:12px;'>
+            <span class='relevance-tag'>{int(hero['score']*100)}% relevance</span>
+            <span class='source-tag'>MS MARCO</span>
+            <span class='source-tag'>{'Personalized' if has_profile else 'Baseline'}</span>
         </div>
-        <p style="font-size: 1.05rem; color: #9a9ab8; line-height: 1.7; max-width: 900px;">{hero['content']}</p>
+        <p class='content'>{hero['content']}</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # --- Result Grid Renderer ---
-    def render_results(df, title, key_prefix):
-        st.markdown(f"### {title}")
-        items = df.head(12)
-        cols = st.columns(4)
-        for i, (idx, row) in enumerate(items.iterrows()):
-            with cols[i % 4]:
-                with st.container(border=True):
-                    st.markdown(f"**{row['title']}**")
-                    st.markdown(f"<p style='font-size:0.8rem; color:#6a6a88; height:80px; overflow:hidden;'>{row['content'][:130]}...</p>", unsafe_allow_html=True)
+    # --- Row renderer ---
+    def render_result_list(df, section_title, key_prefix):
+        st.markdown(f"<div class='section-header'>{section_title}</div>", unsafe_allow_html=True)
 
-                    st.markdown(f"<span class='match-percent'>{int(row['score']*100)}%</span>", unsafe_allow_html=True)
+        items = df.head(10)
+        for rank, (idx, row) in enumerate(items.iterrows(), 1):
+            # Render the styled row via HTML
+            st.markdown(f"""
+            <div class='result-row'>
+                <div class='result-rank'>{rank:02d}</div>
+                <div class='result-body'>
+                    <div class='result-title'>{row['title']}</div>
+                    <div class='result-snippet'>{row['content'][:200]}...</div>
+                    <div class='result-meta'>
+                        <span class='relevance-tag'>{int(row['score']*100)}%</span>
+                        <span class='source-tag'>MS MARCO</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                    b1, b2 = st.columns(2)
-                    if b1.button("👍", key=f"{key_prefix}_up_{idx}"):
-                        vec = st.session_state.engine.embeddings[row['id']]
-                        st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
-                            st.session_state.user_profiles[active_user["name"]], [vec], []
-                        )
-                        st.session_state.feedback_count += 1
-                        st.rerun()
-                    if b2.button("👎", key=f"{key_prefix}_dn_{idx}"):
-                        vec = st.session_state.engine.embeddings[row['id']]
-                        st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
-                            st.session_state.user_profiles[active_user["name"]], [], [vec]
-                        )
-                        st.session_state.feedback_count += 1
-                        st.rerun()
+            # Feedback buttons below each row (native Streamlit)
+            _, fb_col, _ = st.columns([6, 1.5, 6])
+            with fb_col:
+                b1, b2 = st.columns(2)
+                if b1.button("Relevant", key=f"{key_prefix}_up_{idx}"):
+                    vec = st.session_state.engine.embeddings[row['id']]
+                    st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
+                        st.session_state.user_profiles[active_user["name"]], [vec], []
+                    )
+                    st.session_state.feedback_count += 1
+                    st.rerun()
+                if b2.button("Not rel.", key=f"{key_prefix}_dn_{idx}"):
+                    vec = st.session_state.engine.embeddings[row['id']]
+                    st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
+                        st.session_state.user_profiles[active_user["name"]], [], [vec]
+                    )
+                    st.session_state.feedback_count += 1
+                    st.rerun()
 
-    # Personalized row (only show if user has given feedback)
+    # Show personalized results only if user has given feedback
     if has_profile:
-        render_results(results_p, "ADAPTED FOR YOU", "pers")
-        st.write("<br>", unsafe_allow_html=True)
+        render_result_list(results_p, "Adapted for you", "pers")
 
-    render_results(results_b, "ALL RESULTS", "base")
+    render_result_list(results_b, "All results", "base")
 
-    # --- Feedback indicator ---
+    # Feedback count
     if st.session_state.feedback_count > 0:
-        st.markdown(f"<p style='text-align:center; color:#3a3a58; font-size:0.85rem; margin-top:32px;'>📊 {active_user['name']} has given {st.session_state.feedback_count} feedback signal(s) — results are adapting</p>", unsafe_allow_html=True)
+        st.markdown(f"<div class='feedback-bar'>{st.session_state.feedback_count} feedback signal(s) recorded for {active_user['name']}</div>", unsafe_allow_html=True)
 
 else:
     st.markdown("""
     <div class='empty-state'>
-        <div class='icon'>🔎</div>
-        <h3>Enter a query to search</h3>
-        <p>Your results will adapt as you provide feedback with 👍 and 👎</p>
+        <h3>Enter a query above to begin searching</h3>
+        <p>Mark results as relevant or not to personalize future rankings</p>
     </div>
     """, unsafe_allow_html=True)
