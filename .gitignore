@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Search Data & Indices (Too large for GitHub)
+data/
+msmarco_*
+*.index
+*.pkl
+*.parquet
+
+# Streamlit
+.streamlit/
