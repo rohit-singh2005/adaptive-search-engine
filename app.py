@@ -197,11 +197,20 @@ st.markdown("""
         padding: 1px 8px !important;
         font-size: 0.75rem !important;
         transition: all 0.15s ease !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .stButton>button:hover {
         background-color: #5046e5 !important;
         border-color: #5046e5 !important;
         color: white !important;
+    }
+
+    /* ---- Show More Button ---- */
+    .show-more-container {
+        text-align: center;
+        margin: 20px 0 40px;
     }
 
     [data-testid="stHorizontalBlock"] {
@@ -269,6 +278,8 @@ if 'engine' not in st.session_state:
         st.session_state.engine = engine
         st.session_state.current_user = None
         st.session_state.feedback_count = 0
+        st.session_state.num_results_pers = 10
+        st.session_state.num_results_base = 10
         st.session_state.user_profiles = {
             u["name"]: np.zeros(engine.index.d) for u in USERS
         }
@@ -354,7 +365,13 @@ if query:
     def render_result_list(df, section_title, key_prefix):
         st.markdown(f"<div class='section-header'>{section_title}</div>", unsafe_allow_html=True)
 
-        items = df.head(10)
+        limit_key = f"num_results_{key_prefix}"
+        if limit_key not in st.session_state:
+            st.session_state[limit_key] = 10
+        
+        limit = st.session_state[limit_key]
+        items = df.head(limit)
+
         for rank, (idx, row) in enumerate(items.iterrows(), 1):
             # Render the styled row via HTML
             st.markdown(f"""
@@ -372,23 +389,30 @@ if query:
             """, unsafe_allow_html=True)
 
             # Feedback buttons below each row (native Streamlit)
-            _, fb_col, _ = st.columns([6, 1.5, 6])
+            _, fb_col, _ = st.columns([6, 1.2, 6])
             with fb_col:
                 b1, b2 = st.columns(2)
-                if b1.button("Relevant", key=f"{key_prefix}_up_{idx}"):
+                if b1.button(":material/thumb_up:", key=f"{key_prefix}_up_{idx}"):
                     vec = st.session_state.engine.embeddings[row['id']]
                     st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
                         st.session_state.user_profiles[active_user["name"]], [vec], []
                     )
                     st.session_state.feedback_count += 1
                     st.rerun()
-                if b2.button("Not rel.", key=f"{key_prefix}_dn_{idx}"):
+                if b2.button(":material/thumb_down:", key=f"{key_prefix}_dn_{idx}"):
                     vec = st.session_state.engine.embeddings[row['id']]
                     st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
                         st.session_state.user_profiles[active_user["name"]], [], [vec]
                     )
                     st.session_state.feedback_count += 1
                     st.rerun()
+        
+        # Show More Button
+        if len(df) > limit:
+            _, more_col, _ = st.columns([5, 2, 5])
+            if more_col.button(f"Show More Results", key=f"more_{key_prefix}", use_container_width=True):
+                st.session_state[limit_key] += 10
+                st.rerun()
 
     # Show personalized results only if user has given feedback
     if has_profile:
