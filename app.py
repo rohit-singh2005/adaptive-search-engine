@@ -28,51 +28,105 @@ st.markdown("""
     /* ---- Landing ---- */
     .landing-title {
         text-align: center;
-        font-size: 2.8rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #06b6d4, #10b981, #3b82f6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 60px 0 8px;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #e2e8f0;
+        margin: 50px 0 6px;
+        letter-spacing: -0.5px;
+    }
+    .landing-accent {
+        color: #06b6d4;
     }
     .landing-sub {
         text-align: center;
         color: #4a5568;
-        font-size: 1rem;
-        margin-bottom: 48px;
+        font-size: 0.92rem;
+        margin-bottom: 12px;
         font-weight: 400;
+        max-width: 520px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+    }
+    .landing-divider {
+        width: 40px;
+        height: 2px;
+        background: #06b6d4;
+        margin: 20px auto 36px;
+        border-radius: 1px;
+    }
+
+    /* Feature highlights */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        max-width: 700px;
+        margin: 0 auto 48px;
+    }
+    .feature-item {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255,255,255,0.04);
+        border-radius: 10px;
+        padding: 18px 16px;
+        text-align: left;
+    }
+    .feature-icon {
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+    }
+    .feature-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 3px;
+    }
+    .feature-desc {
+        font-size: 0.7rem;
+        color: #4a5568;
+        line-height: 1.4;
+    }
+
+    /* User select section */
+    .section-label {
+        text-align: center;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #374151;
+        margin-bottom: 18px;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .avatar-card {
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(16px);
-        border: 1.5px solid rgba(6, 182, 212, 0.15);
-        border-radius: 16px;
-        padding: 28px 16px 20px;
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(255,255,255,0.04);
+        border-radius: 12px;
+        padding: 22px 14px 16px;
         text-align: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
     }
     .avatar-card:hover {
-        border-color: #06b6d4;
-        box-shadow: 0 0 32px rgba(6, 182, 212, 0.15), 0 8px 32px rgba(0,0,0,0.3);
-        transform: translateY(-4px);
+        border-color: rgba(6, 182, 212, 0.3);
+        background: rgba(15, 23, 42, 0.55);
     }
     .avatar-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        margin: 0 auto 10px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        margin: 0 auto 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 700;
         color: #fff;
     }
     .avatar-name {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #94a3b8;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #64748b;
     }
 
     /* ---- Questionnaire ---- */
@@ -417,12 +471,53 @@ if 'engine' not in st.session_state:
         status.update(label="Ready", state="complete", expanded=False)
 
 # ================================================================
-#  SCREEN 1 — User Selection
+#  SCREEN 1 — Landing Dashboard
 # ================================================================
 if st.session_state.current_user is None:
     st.session_state.questionnaire_done = False
-    st.markdown("<h1 class='landing-title'>Adaptive Search Engine</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='landing-sub'>A retrieval system that adapts search results based on user behavior and interests</p>", unsafe_allow_html=True)
+
+    st.markdown("<h1 class='landing-title'>Adaptive <span class='landing-accent'>Search</span> Engine</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='landing-sub'>An information retrieval system that learns from your behavior to deliver personalized, explainable search results over the MS MARCO corpus.</p>", unsafe_allow_html=True)
+    st.markdown("<div class='landing-divider'></div>", unsafe_allow_html=True)
+
+    # Feature highlights
+    st.markdown("""
+    <div class='feature-grid'>
+        <div class='feature-item'>
+            <div class='feature-icon'>⚡</div>
+            <div class='feature-label'>Hybrid Retrieval</div>
+            <div class='feature-desc'>Dense semantic search + BM25 keyword matching combined for better results</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>🧠</div>
+            <div class='feature-label'>Adaptive Profiles</div>
+            <div class='feature-desc'>Rocchio feedback learns your interests from thumbs up/down signals</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>📊</div>
+            <div class='feature-label'>Evaluation Metrics</div>
+            <div class='feature-desc'>Live P@K, MRR, and Recall tracking across feedback rounds</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>🔍</div>
+            <div class='feature-label'>Query Expansion</div>
+            <div class='feature-desc'>Profile-driven TF-IDF expansion adds related terms automatically</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>💡</div>
+            <div class='feature-label'>Explainable Ranking</div>
+            <div class='feature-desc'>Every result shows why it was ranked — query match, profile, source</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>💾</div>
+            <div class='feature-label'>Persistent Profiles</div>
+            <div class='feature-desc'>Preferences and feedback saved to disk across sessions</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # User selection at bottom
+    st.markdown("<div class='section-label'>Select a profile to begin</div>", unsafe_allow_html=True)
 
     cols = st.columns([1, 3, 1])
     with cols[1]:
@@ -438,23 +533,9 @@ if st.session_state.current_user is None:
                     <div class='avatar-name'>{display_name}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                # Editable name
-                new_name = st.text_input("Name", value=display_name, key=f"name_{i}",
-                                         label_visibility="collapsed", placeholder="Enter name")
-                if new_name and new_name != display_name:
-                    old_name = st.session_state.user_names[i]
-                    st.session_state.user_names[i] = new_name
-                    # Migrate profile data to new name
-                    if old_name in st.session_state.user_profiles:
-                        st.session_state.user_profiles[new_name] = st.session_state.user_profiles.pop(old_name)
-                    if old_name in st.session_state.user_prefs:
-                        st.session_state.user_prefs[new_name] = st.session_state.user_prefs.pop(old_name)
-                    st.rerun()
-
                 if st.button("Select", key=f"sel_{i}", use_container_width=True):
                     uname = st.session_state.user_names[i]
-                    st.session_state.current_user = {"name": uname, "color": color}
-                    # Init profile if new
+                    st.session_state.current_user = {"name": uname, "color": color, "idx": i}
                     if uname not in st.session_state.user_profiles:
                         st.session_state.user_profiles[uname] = np.zeros(st.session_state.engine.index.d)
                     if uname in st.session_state.user_prefs:
@@ -464,16 +545,21 @@ if st.session_state.current_user is None:
     st.stop()
 
 # ================================================================
-#  SCREEN 2 — Initial Questionnaire (shown once per user)
+#  SCREEN 2 — Initial Questionnaire (with editable name)
 # ================================================================
 active_user = st.session_state.current_user
 
 if not st.session_state.questionnaire_done and active_user["name"] not in st.session_state.user_prefs:
-    st.markdown(f"<h1 class='questionnaire-title'>Set up {active_user['name']}'s preferences</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 class='questionnaire-title'>Set up your preferences</h1>", unsafe_allow_html=True)
     st.markdown("<p class='questionnaire-sub'>This helps us personalize your search results from the start</p>", unsafe_allow_html=True)
 
     _, form_col, _ = st.columns([1, 2.5, 1])
     with form_col:
+        # Editable display name
+        st.markdown("<div class='q-section-label'>Your Display Name</div>", unsafe_allow_html=True)
+        new_name = st.text_input("Display Name", value=active_user["name"],
+                                  label_visibility="collapsed", placeholder="Enter your name")
+
         with st.form("questionnaire_form"):
             st.markdown("<div class='q-section-label'>Topics of Interest</div>", unsafe_allow_html=True)
             interests = st.multiselect(
@@ -520,6 +606,17 @@ if not st.session_state.questionnaire_done and active_user["name"] not in st.ses
             skipped = col_skip.form_submit_button("Skip", use_container_width=True)
 
             if submitted:
+                # Handle name change
+                old_name = active_user["name"]
+                final_name = new_name.strip() if new_name.strip() else old_name
+                if final_name != old_name:
+                    idx = active_user.get("idx", 0)
+                    st.session_state.user_names[idx] = final_name
+                    if old_name in st.session_state.user_profiles:
+                        st.session_state.user_profiles[final_name] = st.session_state.user_profiles.pop(old_name)
+                    st.session_state.current_user = {"name": final_name, "color": active_user["color"], "idx": idx}
+
+                uname = final_name
                 prefs = {
                     "interests": interests,
                     "depth": depth,
@@ -527,7 +624,6 @@ if not st.session_state.questionnaire_done and active_user["name"] not in st.ses
                     "source_pref": source_pref,
                     "avoid": avoid,
                 }
-                uname = active_user["name"]
                 st.session_state.user_prefs[uname] = prefs
                 st.session_state.liked_docs[uname] = []
                 st.session_state.search_history.setdefault(uname, [])
@@ -549,7 +645,16 @@ if not st.session_state.questionnaire_done and active_user["name"] not in st.ses
                 st.rerun()
 
             if skipped:
-                uname = active_user["name"]
+                old_name = active_user["name"]
+                final_name = new_name.strip() if new_name.strip() else old_name
+                if final_name != old_name:
+                    idx = active_user.get("idx", 0)
+                    st.session_state.user_names[idx] = final_name
+                    if old_name in st.session_state.user_profiles:
+                        st.session_state.user_profiles[final_name] = st.session_state.user_profiles.pop(old_name)
+                    st.session_state.current_user = {"name": final_name, "color": active_user["color"], "idx": idx}
+
+                uname = final_name
                 st.session_state.user_prefs[uname] = {
                     "interests": [], "depth": "detailed", "recency": "any",
                     "source_pref": "official", "avoid": []
