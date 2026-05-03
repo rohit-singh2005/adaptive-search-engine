@@ -12,54 +12,56 @@ st.set_page_config(page_title="Adaptive Search Engine", layout="wide", page_icon
 # --- Custom Styling ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     .stApp {
-        background: #08080f;
-        color: #c8c8d8;
-        font-family: 'Inter', sans-serif;
+        background: linear-gradient(160deg, #0a0a12 0%, #0d1117 40%, #0a0f1a 100%);
+        color: #d0d7e2;
+        font-family: 'Poppins', sans-serif;
     }
 
     h1, h2, h3 {
-        font-family: 'Space Grotesk', sans-serif;
-        letter-spacing: 0.3px;
+        font-family: 'Poppins', sans-serif;
+        letter-spacing: -0.3px;
     }
 
-    /* ---- User Selection Screen ---- */
+    /* ---- Landing ---- */
     .landing-title {
         text-align: center;
-        font-size: 2.6rem;
-        font-weight: 700;
-        color: #ffffff;
-        margin: 80px 0 6px;
-        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #06b6d4, #10b981, #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 60px 0 8px;
     }
     .landing-sub {
         text-align: center;
-        color: #4e4e6e;
+        color: #4a5568;
         font-size: 1rem;
-        margin-bottom: 56px;
+        margin-bottom: 48px;
         font-weight: 400;
     }
 
     .avatar-card {
-        background: #0e0e1a;
-        border: 1.5px solid #1a1a2e;
-        border-radius: 14px;
-        padding: 32px 16px 24px;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        border: 1.5px solid rgba(6, 182, 212, 0.15);
+        border-radius: 16px;
+        padding: 28px 16px 20px;
         text-align: center;
-        transition: all 0.25s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .avatar-card:hover {
-        border-color: #5046e5;
-        box-shadow: 0 0 28px rgba(80, 70, 229, 0.1);
-        transform: translateY(-3px);
+        border-color: #06b6d4;
+        box-shadow: 0 0 32px rgba(6, 182, 212, 0.15), 0 8px 32px rgba(0,0,0,0.3);
+        transform: translateY(-4px);
     }
     .avatar-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        margin: 0 auto 12px;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        margin: 0 auto 10px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -68,9 +70,9 @@ st.markdown("""
         color: #fff;
     }
     .avatar-name {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 600;
-        color: #9090aa;
+        color: #94a3b8;
     }
 
     /* ---- Questionnaire ---- */
@@ -78,13 +80,12 @@ st.markdown("""
         text-align: center;
         font-size: 1.8rem;
         font-weight: 700;
-        color: #ffffff;
+        color: #f1f5f9;
         margin: 48px 0 4px;
-        font-family: 'Space Grotesk', sans-serif;
     }
     .questionnaire-sub {
         text-align: center;
-        color: #4e4e6e;
+        color: #4a5568;
         font-size: 0.9rem;
         margin-bottom: 32px;
     }
@@ -93,9 +94,9 @@ st.markdown("""
         font-weight: 600;
         letter-spacing: 1.2px;
         text-transform: uppercase;
-        color: #5046e5;
+        color: #06b6d4;
         margin-bottom: 6px;
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* ---- Search Header ---- */
@@ -103,193 +104,215 @@ st.markdown("""
         text-align: center;
         font-size: 1.6rem;
         font-weight: 700;
-        color: #ffffff;
-        margin: 36px 0 2px;
-        font-family: 'Space Grotesk', sans-serif;
+        background: linear-gradient(135deg, #06b6d4, #10b981);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 24px 0 2px;
     }
     .search-subtitle {
         text-align: center;
-        color: #3e3e58;
+        color: #374151;
         font-size: 0.85rem;
-        margin-bottom: 28px;
+        margin-bottom: 24px;
     }
 
     .stTextInput>div>div>input {
-        background-color: #0e0e1a !important;
-        color: #c8c8d8 !important;
-        border: 1.5px solid #1c1c30 !important;
-        border-radius: 12px !important;
+        background-color: rgba(15, 23, 42, 0.7) !important;
+        color: #d0d7e2 !important;
+        border: 1.5px solid rgba(6, 182, 212, 0.2) !important;
+        border-radius: 14px !important;
         padding: 14px 20px !important;
         font-size: 1rem !important;
+        font-family: 'Poppins', sans-serif !important;
+        backdrop-filter: blur(8px);
     }
     .stTextInput>div>div>input:focus {
-        border-color: #5046e5 !important;
-        box-shadow: 0 0 0 2px rgba(80, 70, 229, 0.12) !important;
+        border-color: #06b6d4 !important;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1) !important;
     }
 
     /* ---- Result Row ---- */
     .result-row {
-        background: #0e0e1a;
-        border: 1px solid #16162a;
-        border-radius: 10px;
-        padding: 20px 28px;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(6, 182, 212, 0.08);
+        border-radius: 12px;
+        padding: 20px 24px;
         margin-bottom: 10px;
         display: flex;
         align-items: flex-start;
-        gap: 20px;
-        transition: all 0.2s ease;
+        gap: 18px;
+        transition: all 0.25s ease;
     }
     .result-row:hover {
-        border-color: #2a2a48;
-        background: #101020;
+        border-color: rgba(6, 182, 212, 0.25);
+        background: rgba(15, 23, 42, 0.7);
+        transform: translateX(4px);
     }
     .result-rank {
-        color: #2e2e4a;
+        color: #1e3a5f;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: 700;
         min-width: 28px;
         padding-top: 2px;
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'JetBrains Mono', monospace;
     }
-    .result-body {
-        flex: 1;
-        min-width: 0;
-    }
+    .result-body { flex: 1; min-width: 0; }
     .result-title {
-        font-size: 1.05rem;
+        font-size: 1.02rem;
         font-weight: 600;
-        color: #d8d8ee;
+        color: #e2e8f0;
         margin-bottom: 6px;
         line-height: 1.35;
     }
     .result-snippet {
-        font-size: 0.88rem;
-        color: #6a6a84;
-        line-height: 1.55;
+        font-size: 0.86rem;
+        color: #64748b;
+        line-height: 1.6;
         margin-bottom: 8px;
     }
     .result-meta {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 10px;
         font-size: 0.78rem;
+        flex-wrap: wrap;
     }
     .relevance-tag {
-        color: #00c896;
-        font-weight: 600;
+        color: #10b981;
+        font-weight: 700;
         font-size: 0.82rem;
-    }
-    .source-tag {
-        color: #3e3e58;
+        font-family: 'JetBrains Mono', monospace;
     }
     .source-badge {
-        background: #16162a;
-        color: #6a6a88;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.72rem;
+        background: rgba(6, 182, 212, 0.08);
+        color: #64748b;
+        padding: 2px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
         font-weight: 500;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* ---- Hero Result ---- */
     .hero-result {
-        background: linear-gradient(135deg, #0e0e1a 0%, #111126 70%, rgba(80, 70, 229, 0.06) 100%);
-        border: 1px solid #1c1c36;
-        border-left: 4px solid #5046e5;
-        border-radius: 12px;
-        padding: 32px 36px;
-        margin: 20px 0 28px;
+        background: linear-gradient(135deg, rgba(15,23,42,0.7) 0%, rgba(6,182,212,0.05) 100%);
+        border: 1px solid rgba(6, 182, 212, 0.15);
+        border-left: 4px solid #06b6d4;
+        border-radius: 14px;
+        padding: 28px 32px;
+        margin: 16px 0 24px;
+        backdrop-filter: blur(12px);
     }
     .hero-result h2 {
-        color: #e8e8f4;
-        font-size: 1.5rem;
+        color: #f1f5f9;
+        font-size: 1.4rem;
         margin: 0 0 10px;
     }
     .hero-result p.content {
-        color: #8888a4;
-        font-size: 1rem;
+        color: #7c8ca3;
+        font-size: 0.95rem;
         line-height: 1.7;
         max-width: 860px;
     }
 
     /* ---- Section Header ---- */
     .section-header {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         font-weight: 600;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.8px;
         text-transform: uppercase;
-        color: #3a3a54;
-        margin: 32px 0 14px;
-        font-family: 'Space Grotesk', sans-serif;
+        color: #06b6d4;
+        margin: 28px 0 14px;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* ---- Explanation Box ---- */
     .explain-box {
-        background: #0c0c18;
-        border: 1px solid #1a1a30;
-        border-left: 3px solid #5046e5;
-        border-radius: 6px;
+        background: rgba(6, 182, 212, 0.04);
+        border: 1px solid rgba(6, 182, 212, 0.1);
+        border-left: 3px solid #06b6d4;
+        border-radius: 8px;
         padding: 10px 16px;
         margin: 4px 0 10px;
         font-size: 0.78rem;
-        color: #7a7a98;
+        color: #7c8ca3;
         line-height: 1.5;
     }
-    .explain-box .reason {
-        margin: 2px 0;
-    }
+    .explain-box .reason { margin: 2px 0; }
 
     /* ---- Conflict Warning ---- */
     .conflict-banner {
-        background: rgba(245, 158, 11, 0.08);
+        background: rgba(245, 158, 11, 0.06);
         border: 1px solid rgba(245, 158, 11, 0.2);
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 12px 20px;
         margin: 12px 0 20px;
         color: #d4a036;
         font-size: 0.85rem;
     }
 
+    /* ---- Stats Card ---- */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 16px 0 24px;
+    }
+    .stat-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(6, 182, 212, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        backdrop-filter: blur(8px);
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        color: #06b6d4;
+    }
+    .stat-label {
+        font-size: 0.72rem;
+        color: #4a5568;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-top: 4px;
+    }
+
     /* ---- Buttons ---- */
     .stButton>button {
         background-color: transparent !important;
-        color: #5a5a74 !important;
-        border: 1px solid #1c1c30 !important;
-        border-radius: 6px !important;
+        color: #64748b !important;
+        border: 1px solid rgba(6, 182, 212, 0.15) !important;
+        border-radius: 8px !important;
         padding: 1px 8px !important;
         font-size: 0.75rem !important;
-        transition: all 0.15s ease !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        font-family: 'Poppins', sans-serif !important;
+        transition: all 0.2s ease !important;
     }
     .stButton>button:hover {
-        background-color: #5046e5 !important;
-        border-color: #5046e5 !important;
+        background: linear-gradient(135deg, #06b6d4, #10b981) !important;
+        border-color: transparent !important;
         color: white !important;
+        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25) !important;
     }
 
-    /* ---- Show More Button ---- */
-    .show-more-container {
-        text-align: center;
-        margin: 20px 0 40px;
-    }
+    .show-more-container { text-align: center; margin: 20px 0 40px; }
+    [data-testid="stHorizontalBlock"] { gap: 0rem !important; }
 
-    [data-testid="stHorizontalBlock"] {
-        gap: 0rem !important;
-    }
-
-    /* ---- Top Bar ---- */
+    /* ---- Topbar ---- */
     .topbar-badge {
-        background: #0e0e1a;
-        border: 1px solid #1a1a2e;
-        border-radius: 8px;
-        padding: 5px 14px;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(6, 182, 212, 0.15);
+        border-radius: 10px;
+        padding: 6px 16px;
         display: inline-flex;
         align-items: center;
         gap: 8px;
         font-size: 0.85rem;
-        color: #8888a4;
+        color: #94a3b8;
     }
     .topbar-dot {
         width: 8px;
@@ -299,33 +322,46 @@ st.markdown("""
     }
 
     /* ---- Empty State ---- */
-    .empty-state {
-        text-align: center;
-        margin-top: 100px;
-    }
-    .empty-state h3 { color: #2a2a44; font-size: 1.1rem; }
-    .empty-state p { color: #1e1e38; font-size: 0.85rem; margin-top: 4px; }
+    .empty-state { text-align: center; margin-top: 100px; }
+    .empty-state h3 { color: #1e3a5f; font-size: 1.1rem; }
+    .empty-state p { color: #1a2a42; font-size: 0.85rem; margin-top: 4px; }
 
     /* ---- Feedback bar ---- */
     .feedback-bar {
         text-align: center;
-        color: #2a2a44;
+        color: #2a4a6a;
         font-size: 0.8rem;
         margin-top: 36px;
         padding: 10px;
-        border-top: 1px solid #12121f;
+        border-top: 1px solid rgba(6, 182, 212, 0.1);
+    }
+
+    /* ---- Expansion Banner ---- */
+    .expansion-banner {
+        background: rgba(16, 185, 129, 0.06);
+        border: 1px solid rgba(16, 185, 129, 0.15);
+        border-radius: 10px;
+        padding: 10px 18px;
+        margin: 8px 0 16px;
+        font-size: 0.82rem;
+        color: #10b981;
+    }
+    .expansion-banner b { color: #34d399; }
+
+    /* ---- Sidebar ---- */
+    section[data-testid="stSidebar"] {
+        background: rgba(10, 15, 26, 0.95) !important;
+        border-right: 1px solid rgba(6, 182, 212, 0.08) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # --- User definitions ---
-USERS = [
-    {"name": "User 1", "color": "#5046e5"},
-    {"name": "User 2", "color": "#0ea5e9"},
-    {"name": "User 3", "color": "#8b5cf6"},
-    {"name": "User 4", "color": "#ec4899"},
-    {"name": "User 5", "color": "#f59e0b"},
-]
+USER_COLORS = ["#06b6d4", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899"]
+
+# Init editable names
+if 'user_names' not in st.session_state:
+    st.session_state.user_names = [f"User {i+1}" for i in range(5)]
 
 # --- Questionnaire Options ---
 INTEREST_OPTIONS = ["Tech", "Health", "Finance", "Sports", "Entertainment"]
@@ -350,14 +386,18 @@ if 'engine' not in st.session_state:
         st.session_state.feedback_count = 0
         st.session_state.num_results_pers = 10
         st.session_state.num_results_base = 10
-        st.session_state.user_profiles = {u["name"]: np.zeros(engine.index.d) for u in USERS}
-        st.session_state.user_prefs = {}      # questionnaire answers per user
-        st.session_state.liked_docs = {}      # liked document texts per user
-        st.session_state.search_history = {}  # per-user query history
-        st.session_state.feedback_log = {}    # per-user feedback action log
-        st.session_state.eval_history = {}    # per-user eval metrics over time
-        st.session_state.liked_ids = {}       # per-user set of liked doc IDs
-        st.session_state.disliked_ids = {}    # per-user set of disliked doc IDs
+        st.session_state.user_profiles = {}
+        st.session_state.user_prefs = {}
+        st.session_state.liked_docs = {}
+        st.session_state.search_history = {}
+        st.session_state.feedback_log = {}
+        st.session_state.eval_history = {}
+        st.session_state.liked_ids = {}
+        st.session_state.disliked_ids = {}
+
+        # Init profiles for default users
+        for i in range(5):
+            st.session_state.user_profiles[f"User {i+1}"] = np.zeros(engine.index.d)
 
         # Load persisted profiles if available
         saved = engine.load_profiles()
@@ -367,11 +407,11 @@ if 'engine' not in st.session_state:
             st.session_state.user_prefs.update(prefs)
             st.session_state.liked_docs.update(liked_docs)
             st.session_state.feedback_log.update(feedback_log)
-            for uname in prefs:
-                st.session_state.search_history.setdefault(uname, [])
-                st.session_state.eval_history.setdefault(uname, [])
-                st.session_state.liked_ids.setdefault(uname, [])
-                st.session_state.disliked_ids.setdefault(uname, [])
+            for un in prefs:
+                st.session_state.search_history.setdefault(un, [])
+                st.session_state.eval_history.setdefault(un, [])
+                st.session_state.liked_ids.setdefault(un, [])
+                st.session_state.disliked_ids.setdefault(un, [])
             st.write("Loaded saved user profiles from disk.")
 
         status.update(label="Ready", state="complete", expanded=False)
@@ -389,18 +429,35 @@ if st.session_state.current_user is None:
         inner_cols = st.columns(5)
         for i in range(5):
             with inner_cols[i]:
-                u = USERS[i]
-                initials = u["name"].replace("User ", "U")
+                color = USER_COLORS[i]
+                display_name = st.session_state.user_names[i]
+                initials = display_name[:2].upper()
                 st.markdown(f"""
                 <div class='avatar-card'>
-                    <div class='avatar-icon' style='background:{u["color"]};'>{initials}</div>
-                    <div class='avatar-name'>{u["name"]}</div>
+                    <div class='avatar-icon' style='background:{color};'>{initials}</div>
+                    <div class='avatar-name'>{display_name}</div>
                 </div>
                 """, unsafe_allow_html=True)
+                # Editable name
+                new_name = st.text_input("Name", value=display_name, key=f"name_{i}",
+                                         label_visibility="collapsed", placeholder="Enter name")
+                if new_name and new_name != display_name:
+                    old_name = st.session_state.user_names[i]
+                    st.session_state.user_names[i] = new_name
+                    # Migrate profile data to new name
+                    if old_name in st.session_state.user_profiles:
+                        st.session_state.user_profiles[new_name] = st.session_state.user_profiles.pop(old_name)
+                    if old_name in st.session_state.user_prefs:
+                        st.session_state.user_prefs[new_name] = st.session_state.user_prefs.pop(old_name)
+                    st.rerun()
+
                 if st.button("Select", key=f"sel_{i}", use_container_width=True):
-                    st.session_state.current_user = u
-                    # Check if this user already completed questionnaire
-                    if u["name"] in st.session_state.user_prefs:
+                    uname = st.session_state.user_names[i]
+                    st.session_state.current_user = {"name": uname, "color": color}
+                    # Init profile if new
+                    if uname not in st.session_state.user_profiles:
+                        st.session_state.user_profiles[uname] = np.zeros(st.session_state.engine.index.d)
+                    if uname in st.session_state.user_prefs:
                         st.session_state.questionnaire_done = True
                     st.rerun()
 
@@ -624,7 +681,32 @@ if query:
     # Show expansion terms if used
     if expansion_terms:
         terms_str = ", ".join(expansion_terms[:5])
-        st.markdown(f"<div class='explain-box'><b>Query expanded with:</b> {terms_str}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='expansion-banner'><b>🔄 Query expanded with:</b> {terms_str}</div>", unsafe_allow_html=True)
+
+    # --- Visible Stats Grid (main area) ---
+    prof_str = min(float(np.linalg.norm(profile_vec)) * 100, 100)
+    total_fb = len(st.session_state.liked_ids.get(uname, [])) + len(st.session_state.disliked_ids.get(uname, []))
+    mode_label = "Hybrid" if dense_w < 1.0 else "Dense Only"
+    st.markdown(f"""
+    <div class='stats-grid'>
+        <div class='stat-card'>
+            <div class='stat-value'>{mode_label}</div>
+            <div class='stat-label'>Retrieval Mode</div>
+        </div>
+        <div class='stat-card'>
+            <div class='stat-value'>{int(dense_w*100)}:{int((1-dense_w)*100)}</div>
+            <div class='stat-label'>Dense : BM25</div>
+        </div>
+        <div class='stat-card'>
+            <div class='stat-value'>{prof_str:.0f}%</div>
+            <div class='stat-label'>Profile Strength</div>
+        </div>
+        <div class='stat-card'>
+            <div class='stat-value'>{total_fb}</div>
+            <div class='stat-label'>Feedback Signals</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Log search to history
     query_topics = st.session_state.engine.classify_text(query)
@@ -636,13 +718,17 @@ if query:
     # --- Hero ---
     hero = results_p.iloc[0]
     hero_source = hero.get('source_type', 'general')
+    hero_dense = int(hero.get('dense_sim', 0) * 100)
+    hero_bm25 = int(hero.get('bm25_sim', 0) * 100)
     st.markdown(f"""
     <div class='hero-result'>
         <h2>{hero['title']}</h2>
         <div class='result-meta' style='margin-bottom:12px;'>
             <span class='relevance-tag'>{int(hero['score']*100)}% relevance</span>
             <span class='source-badge'>{hero_source}</span>
-            <span class='source-tag'>{'Personalized' if has_profile else 'Baseline'}</span>
+            <span class='source-badge'>Dense: {hero_dense}%</span>
+            <span class='source-badge'>BM25: {hero_bm25}%</span>
+            <span class='source-badge'>{'✨ Personalized' if has_profile else 'Baseline'}</span>
         </div>
         <p class='content'>{hero['content']}</p>
     </div>
