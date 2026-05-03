@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 
 # --- Page Config ---
-st.set_page_config(page_title="Adaptive Search Engine", layout="wide", page_icon="🔍")
+st.set_page_config(page_title="Adaptive Search Engine", layout="wide", page_icon="A")
 
 # --- Custom Styling ---
 st.markdown("""
@@ -250,23 +250,23 @@ st.markdown("""
 
     /* ---- Hero Result ---- */
     .hero-result {
-        background: linear-gradient(135deg, rgba(15,23,42,0.7) 0%, rgba(6,182,212,0.05) 100%);
-        border: 1px solid rgba(6, 182, 212, 0.15);
-        border-left: 4px solid #06b6d4;
+        background: linear-gradient(145deg, rgba(6,182,212,0.06) 0%, rgba(15,23,42,0.7) 40%, rgba(15,23,42,0.5) 100%);
+        border: 1px solid rgba(6, 182, 212, 0.2);
+        border-top: 3px solid #06b6d4;
         border-radius: 14px;
-        padding: 28px 32px;
-        margin: 16px 0 24px;
-        backdrop-filter: blur(12px);
+        padding: 32px 36px;
+        margin: 16px 0 28px;
     }
     .hero-result h2 {
         color: #f1f5f9;
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         margin: 0 0 10px;
+        font-weight: 700;
     }
     .hero-result p.content {
-        color: #7c8ca3;
+        color: #94a3b8;
         font-size: 0.95rem;
-        line-height: 1.7;
+        line-height: 1.75;
         max-width: 860px;
     }
 
@@ -470,6 +470,18 @@ if 'engine' not in st.session_state:
 
         status.update(label="Ready", state="complete", expanded=False)
 
+# --- SVG Icons ---
+SVG_BOLT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+SVG_BRAIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><line x1="10" y1="22" x2="14" y2="22"/></svg>'
+SVG_CHART = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'
+SVG_SEARCH = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+SVG_BULB = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>'
+SVG_SAVE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+SVG_GEAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+SVG_ACTIVITY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
+SVG_CLOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+SVG_REFRESH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
+
 # ================================================================
 #  SCREEN 1 — Landing Dashboard
 # ================================================================
@@ -480,43 +492,7 @@ if st.session_state.current_user is None:
     st.markdown("<p class='landing-sub'>An information retrieval system that learns from your behavior to deliver personalized, explainable search results over the MS MARCO corpus.</p>", unsafe_allow_html=True)
     st.markdown("<div class='landing-divider'></div>", unsafe_allow_html=True)
 
-    # Feature highlights
-    st.markdown("""
-    <div class='feature-grid'>
-        <div class='feature-item'>
-            <div class='feature-icon'>⚡</div>
-            <div class='feature-label'>Hybrid Retrieval</div>
-            <div class='feature-desc'>Dense semantic search + BM25 keyword matching combined for better results</div>
-        </div>
-        <div class='feature-item'>
-            <div class='feature-icon'>🧠</div>
-            <div class='feature-label'>Adaptive Profiles</div>
-            <div class='feature-desc'>Rocchio feedback learns your interests from thumbs up/down signals</div>
-        </div>
-        <div class='feature-item'>
-            <div class='feature-icon'>📊</div>
-            <div class='feature-label'>Evaluation Metrics</div>
-            <div class='feature-desc'>Live P@K, MRR, and Recall tracking across feedback rounds</div>
-        </div>
-        <div class='feature-item'>
-            <div class='feature-icon'>🔍</div>
-            <div class='feature-label'>Query Expansion</div>
-            <div class='feature-desc'>Profile-driven TF-IDF expansion adds related terms automatically</div>
-        </div>
-        <div class='feature-item'>
-            <div class='feature-icon'>💡</div>
-            <div class='feature-label'>Explainable Ranking</div>
-            <div class='feature-desc'>Every result shows why it was ranked — query match, profile, source</div>
-        </div>
-        <div class='feature-item'>
-            <div class='feature-icon'>💾</div>
-            <div class='feature-label'>Persistent Profiles</div>
-            <div class='feature-desc'>Preferences and feedback saved to disk across sessions</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # User selection at bottom
+    # User selection first
     st.markdown("<div class='section-label'>Select a profile to begin</div>", unsafe_allow_html=True)
 
     cols = st.columns([1, 3, 1])
@@ -541,6 +517,44 @@ if st.session_state.current_user is None:
                     if uname in st.session_state.user_prefs:
                         st.session_state.questionnaire_done = True
                     st.rerun()
+
+    # Feature highlights below user selection
+    st.markdown("<div style='margin-top:48px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>System capabilities</div>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class='feature-grid'>
+        <div class='feature-item'>
+            <div class='feature-icon'>{SVG_BOLT}</div>
+            <div class='feature-label'>Hybrid Retrieval</div>
+            <div class='feature-desc'>Dense semantic search combined with BM25 keyword matching</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>{SVG_BRAIN}</div>
+            <div class='feature-label'>Adaptive Profiles</div>
+            <div class='feature-desc'>Rocchio feedback learns your interests from relevance signals</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>{SVG_CHART}</div>
+            <div class='feature-label'>Evaluation Metrics</div>
+            <div class='feature-desc'>Live P@K, MRR, and Recall tracking across feedback rounds</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>{SVG_SEARCH}</div>
+            <div class='feature-label'>Query Expansion</div>
+            <div class='feature-desc'>Profile-driven TF-IDF expansion adds related terms to queries</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>{SVG_BULB}</div>
+            <div class='feature-label'>Explainable Ranking</div>
+            <div class='feature-desc'>Every result shows why it was ranked high or low</div>
+        </div>
+        <div class='feature-item'>
+            <div class='feature-icon'>{SVG_SAVE}</div>
+            <div class='feature-label'>Persistent Profiles</div>
+            <div class='feature-desc'>Preferences and feedback saved to disk across sessions</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.stop()
 
@@ -691,13 +705,13 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.markdown("##### ⚙️ Retrieval Controls")
+    st.markdown(f"##### {SVG_GEAR} Retrieval Controls", unsafe_allow_html=True)
     pers_weight = st.slider("Personalization Weight", 0.0, 1.0, 0.5, 0.05, help="How much to bias results toward your profile")
     dense_w = st.slider("Dense vs BM25 Blend", 0.0, 1.0, 0.7, 0.05, help="1.0 = pure dense, 0.0 = pure BM25")
     use_expansion = st.toggle("Query Expansion", value=False, help="Expand query using profile-derived terms")
 
     st.markdown("---")
-    st.markdown("##### 📊 Profile Analytics")
+    st.markdown(f"##### {SVG_ACTIVITY} Profile Analytics", unsafe_allow_html=True)
     prof_norm = float(np.linalg.norm(profile_vec))
     strength = min(prof_norm * 100, 100)
     st.progress(strength / 100, text=f"Profile Strength: {strength:.0f}%")
@@ -712,7 +726,7 @@ with st.sidebar:
             topic_scores[topic] = float(np.dot(profile_vec, t_vec))
         fig = go.Figure(go.Bar(
             x=list(topic_scores.values()), y=list(topic_scores.keys()),
-            orientation='h', marker_color='#5046e5'
+            orientation='h', marker_color='#06b6d4'
         ))
         fig.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
                           paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -723,15 +737,15 @@ with st.sidebar:
     total_likes = len(st.session_state.liked_ids.get(uname, []))
     total_dislikes = len(st.session_state.disliked_ids.get(uname, []))
     fb_col1, fb_col2 = st.columns(2)
-    fb_col1.metric("👍 Likes", total_likes)
-    fb_col2.metric("👎 Dislikes", total_dislikes)
+    fb_col1.metric("Likes", total_likes)
+    fb_col2.metric("Dislikes", total_dislikes)
 
     st.markdown("---")
-    st.markdown("##### 🕑 Recent Searches")
+    st.markdown(f"##### {SVG_CLOCK} Recent Searches", unsafe_allow_html=True)
     history = st.session_state.search_history.get(uname, [])
     if history:
         for h in history[-5:][::-1]:
-            st.caption(f"🔍 {h['query'][:40]}...")
+            st.caption(f"{h['query'][:40]}...")
     else:
         st.caption("No searches yet")
 
@@ -786,7 +800,7 @@ if query:
     # Show expansion terms if used
     if expansion_terms:
         terms_str = ", ".join(expansion_terms[:5])
-        st.markdown(f"<div class='expansion-banner'><b>🔄 Query expanded with:</b> {terms_str}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='expansion-banner'>{SVG_REFRESH} <b>Query expanded with:</b> {terms_str}</div>", unsafe_allow_html=True)
 
     # --- Visible Stats Grid (main area) ---
     prof_str = min(float(np.linalg.norm(profile_vec)) * 100, 100)
@@ -820,20 +834,23 @@ if query:
     if not user_hist or user_hist[-1]["query"] != query:
         st.session_state.search_history.setdefault(uname, []).append(hist_entry)
 
-    # --- Hero ---
+    # --- Hero (Top Answer) ---
     hero = results_p.iloc[0]
     hero_source = hero.get('source_type', 'general')
     hero_dense = int(hero.get('dense_sim', 0) * 100)
     hero_bm25 = int(hero.get('bm25_sim', 0) * 100)
     st.markdown(f"""
     <div class='hero-result'>
+        <div style='display:flex;align-items:center;gap:8px;margin-bottom:14px;'>
+            <span style='background:#06b6d4;color:#0a0f1a;padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:700;font-family:JetBrains Mono,monospace;letter-spacing:0.5px;'>TOP RESULT</span>
+            <span class='source-badge'>{'Personalized' if has_profile else 'Baseline'}</span>
+        </div>
         <h2>{hero['title']}</h2>
-        <div class='result-meta' style='margin-bottom:12px;'>
+        <div class='result-meta' style='margin-bottom:14px;'>
             <span class='relevance-tag'>{int(hero['score']*100)}% relevance</span>
             <span class='source-badge'>{hero_source}</span>
             <span class='source-badge'>Dense: {hero_dense}%</span>
             <span class='source-badge'>BM25: {hero_bm25}%</span>
-            <span class='source-badge'>{'✨ Personalized' if has_profile else 'Baseline'}</span>
         </div>
         <p class='content'>{hero['content']}</p>
     </div>
@@ -929,7 +946,7 @@ if query:
     # --- Evaluation Metrics ---
     liked_set = set(st.session_state.liked_ids.get(uname, []))
     if liked_set:
-        with st.expander("📈 Retrieval Evaluation Metrics"):
+        with st.expander("Retrieval Evaluation Metrics"):
             ranked_ids = results_p['id'].tolist()
             p5 = st.session_state.engine.compute_precision_at_k(ranked_ids, liked_set, k=5)
             p10 = st.session_state.engine.compute_precision_at_k(ranked_ids, liked_set, k=10)
