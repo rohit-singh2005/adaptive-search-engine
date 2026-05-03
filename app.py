@@ -1,8 +1,10 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 from ir_engine import IREngine
 import os
+from datetime import datetime
 
 # --- Page Config ---
 st.set_page_config(page_title="Adaptive Search Engine", layout="wide", page_icon="🔍")
@@ -339,7 +341,7 @@ if 'engine' not in st.session_state:
         engine = IREngine(subset_size=5000)
         st.write("Loading MS MARCO data...")
         engine.load_data()
-        st.write("Building vector index...")
+        st.write("Building vector index + BM25...")
         engine.build_index()
 
         st.session_state.engine = engine
@@ -351,6 +353,27 @@ if 'engine' not in st.session_state:
         st.session_state.user_profiles = {u["name"]: np.zeros(engine.index.d) for u in USERS}
         st.session_state.user_prefs = {}      # questionnaire answers per user
         st.session_state.liked_docs = {}      # liked document texts per user
+        st.session_state.search_history = {}  # per-user query history
+        st.session_state.feedback_log = {}    # per-user feedback action log
+        st.session_state.eval_history = {}    # per-user eval metrics over time
+        st.session_state.liked_ids = {}       # per-user set of liked doc IDs
+        st.session_state.disliked_ids = {}    # per-user set of disliked doc IDs
+
+        # Load persisted profiles if available
+        saved = engine.load_profiles()
+        if saved:
+            profiles, prefs, liked_docs, feedback_log = saved
+            st.session_state.user_profiles.update(profiles)
+            st.session_state.user_prefs.update(prefs)
+            st.session_state.liked_docs.update(liked_docs)
+            st.session_state.feedback_log.update(feedback_log)
+            for uname in prefs:
+                st.session_state.search_history.setdefault(uname, [])
+                st.session_state.eval_history.setdefault(uname, [])
+                st.session_state.liked_ids.setdefault(uname, [])
+                st.session_state.disliked_ids.setdefault(uname, [])
+            st.write("Loaded saved user profiles from disk.")
+
         status.update(label="Ready", state="complete", expanded=False)
 
 # ================================================================
@@ -389,13 +412,6 @@ if st.session_state.current_user is None:
 active_user = st.session_state.current_user
 
 if not st.session_state.questionnaire_done and active_user["name"] not in st.session_state.user_prefs:
-    # --- Top bar for questionnaire ---
-    q_top_cols = st.columns([0.1, 0.9])
-    with q_top_cols[0]:
-        if st.button(":material/arrow_back:", key="q_back_btn", help="Go back to user selection"):
-            st.session_state.current_user = None
-            st.rerun()
-
     st.markdown(f"<h1 class='questionnaire-title'>Set up {active_user['name']}'s preferences</h1>", unsafe_allow_html=True)
     st.markdown("<p class='questionnaire-sub'>This helps us personalize your search results from the start</p>", unsafe_allow_html=True)
 
@@ -454,22 +470,39 @@ if not st.session_state.questionnaire_done and active_user["name"] not in st.ses
                     "source_pref": source_pref,
                     "avoid": avoid,
                 }
-                st.session_state.user_prefs[active_user["name"]] = prefs
-                st.session_state.liked_docs[active_user["name"]] = []
+                uname = active_user["name"]
+                st.session_state.user_prefs[uname] = prefs
+                st.session_state.liked_docs[uname] = []
+                st.session_state.search_history.setdefault(uname, [])
+                st.session_state.feedback_log.setdefault(uname, [])
+                st.session_state.eval_history.setdefault(uname, [])
+                st.session_state.liked_ids.setdefault(uname, [])
+                st.session_state.disliked_ids.setdefault(uname, [])
 
                 # Build initial profile vector from questionnaire
                 initial_vec = st.session_state.engine.build_initial_profile(interests, depth, source_pref)
-                st.session_state.user_profiles[active_user["name"]] = initial_vec
+                st.session_state.user_profiles[uname] = initial_vec
+
+                # Persist to disk
+                st.session_state.engine.save_profiles(
+                    st.session_state.user_profiles, st.session_state.user_prefs,
+                    st.session_state.liked_docs, st.session_state.feedback_log)
 
                 st.session_state.questionnaire_done = True
                 st.rerun()
 
             if skipped:
-                st.session_state.user_prefs[active_user["name"]] = {
+                uname = active_user["name"]
+                st.session_state.user_prefs[uname] = {
                     "interests": [], "depth": "detailed", "recency": "any",
                     "source_pref": "official", "avoid": []
                 }
-                st.session_state.liked_docs[active_user["name"]] = []
+                st.session_state.liked_docs[uname] = []
+                st.session_state.search_history.setdefault(uname, [])
+                st.session_state.feedback_log.setdefault(uname, [])
+                st.session_state.eval_history.setdefault(uname, [])
+                st.session_state.liked_ids.setdefault(uname, [])
+                st.session_state.disliked_ids.setdefault(uname, [])
                 st.session_state.questionnaire_done = True
                 st.rerun()
 
@@ -478,29 +511,67 @@ if not st.session_state.questionnaire_done and active_user["name"] not in st.ses
 # ================================================================
 #  SCREEN 3 — Search Interface
 # ================================================================
-profile_vec = st.session_state.user_profiles[active_user["name"]]
-user_prefs = st.session_state.user_prefs.get(active_user["name"], {})
-liked_docs = st.session_state.liked_docs.get(active_user["name"], [])
+uname = active_user["name"]
+profile_vec = st.session_state.user_profiles[uname]
+user_prefs = st.session_state.user_prefs.get(uname, {})
+liked_docs = st.session_state.liked_docs.get(uname, [])
+st.session_state.search_history.setdefault(uname, [])
+st.session_state.feedback_log.setdefault(uname, [])
+st.session_state.eval_history.setdefault(uname, [])
+st.session_state.liked_ids.setdefault(uname, [])
+st.session_state.disliked_ids.setdefault(uname, [])
 
-# --- Top bar ---
-top_back, top_user, top_spacer, top_switch = st.columns([0.5, 2, 4, 1.2])
-with top_back:
-    if st.button(":material/arrow_back:", key="back_btn", help="Go back to user selection"):
+# --- Sidebar: Controls + Analytics ---
+with st.sidebar:
+    st.markdown(f"<div class='topbar-badge'><span class='topbar-dot' style='background:{active_user['color']};'></span> {uname}</div>", unsafe_allow_html=True)
+    if st.button("Switch User", use_container_width=True):
         st.session_state.current_user = None
-        st.session_state.questionnaire_done = False
         st.rerun()
-with top_user:
-    st.markdown(f"""
-    <div class='topbar-badge'>
-        <span class='topbar-dot' style='background:{active_user["color"]};'></span>
-        {active_user["name"]}
-    </div>
-    """, unsafe_allow_html=True)
-with top_switch:
-    if st.button("Switch User"):
-        st.session_state.current_user = None
-        st.session_state.questionnaire_done = False
-        st.rerun()
+
+    st.markdown("---")
+    st.markdown("##### ⚙️ Retrieval Controls")
+    pers_weight = st.slider("Personalization Weight", 0.0, 1.0, 0.5, 0.05, help="How much to bias results toward your profile")
+    dense_w = st.slider("Dense vs BM25 Blend", 0.0, 1.0, 0.7, 0.05, help="1.0 = pure dense, 0.0 = pure BM25")
+    use_expansion = st.toggle("Query Expansion", value=False, help="Expand query using profile-derived terms")
+
+    st.markdown("---")
+    st.markdown("##### 📊 Profile Analytics")
+    prof_norm = float(np.linalg.norm(profile_vec))
+    strength = min(prof_norm * 100, 100)
+    st.progress(strength / 100, text=f"Profile Strength: {strength:.0f}%")
+
+    # Topic affinity from profile
+    if prof_norm > 0:
+        from ir_engine import TOPIC_KEYWORDS
+        topic_scores = {}
+        for topic, kws in TOPIC_KEYWORDS.items():
+            topic_text = " ".join(kws)
+            t_vec = st.session_state.engine.get_embedding(topic_text)
+            topic_scores[topic] = float(np.dot(profile_vec, t_vec))
+        fig = go.Figure(go.Bar(
+            x=list(topic_scores.values()), y=list(topic_scores.keys()),
+            orientation='h', marker_color='#5046e5'
+        ))
+        fig.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
+                          paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                          font=dict(color='#8888a4', size=11),
+                          xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+        st.plotly_chart(fig, use_container_width=True)
+
+    total_likes = len(st.session_state.liked_ids.get(uname, []))
+    total_dislikes = len(st.session_state.disliked_ids.get(uname, []))
+    fb_col1, fb_col2 = st.columns(2)
+    fb_col1.metric("👍 Likes", total_likes)
+    fb_col2.metric("👎 Dislikes", total_dislikes)
+
+    st.markdown("---")
+    st.markdown("##### 🕑 Recent Searches")
+    history = st.session_state.search_history.get(uname, [])
+    if history:
+        for h in history[-5:][::-1]:
+            st.caption(f"🔍 {h['query'][:40]}...")
+    else:
+        st.caption("No searches yet")
 
 # --- Search area ---
 st.markdown("<div class='search-title'>Adaptive Search Engine</div>", unsafe_allow_html=True)
@@ -518,15 +589,14 @@ if query:
     recency_pref = user_prefs.get("recency", "any")
 
     # Topic mismatch detection
-    has_conflict, p_weight = st.session_state.engine.detect_topic_conflict(query, avoid_topics)
+    has_conflict, default_pw = st.session_state.engine.detect_topic_conflict(query, avoid_topics)
+    p_weight = min(pers_weight, default_pw) if has_conflict else pers_weight
     if not has_profile:
         p_weight = 0.0
 
     # Recency weight based on preference
     recency_weight_map = {"last week": 0.15, "last month": 0.10, "last year": 0.05, "any": 0.0}
     r_weight = recency_weight_map.get(recency_pref, 0.0)
-
-    # Source weight
     s_weight = 0.1 if preferred_sources else 0.0
 
     # Conflict banner
@@ -540,11 +610,28 @@ if query:
         </div>
         """, unsafe_allow_html=True)
 
-    results_p = st.session_state.engine.search(
+    # Execute hybrid search
+    results_p, expansion_terms = st.session_state.engine.search(
         query, profile_vec=profile_vec, personalization_weight=p_weight,
-        preferred_sources=preferred_sources, recency_weight=r_weight, source_weight=s_weight
+        preferred_sources=preferred_sources, recency_weight=r_weight, source_weight=s_weight,
+        dense_weight=dense_w, use_bm25=True, expand=use_expansion
     )
-    results_b = st.session_state.engine.search(query, profile_vec=None, personalization_weight=0.0)
+    results_b, _ = st.session_state.engine.search(
+        query, profile_vec=None, personalization_weight=0.0,
+        dense_weight=dense_w, use_bm25=True
+    )
+
+    # Show expansion terms if used
+    if expansion_terms:
+        terms_str = ", ".join(expansion_terms[:5])
+        st.markdown(f"<div class='explain-box'><b>Query expanded with:</b> {terms_str}</div>", unsafe_allow_html=True)
+
+    # Log search to history
+    query_topics = st.session_state.engine.classify_text(query)
+    hist_entry = {"query": query, "time": datetime.now().isoformat(), "topics": query_topics[:3]}
+    user_hist = st.session_state.search_history.get(uname, [])
+    if not user_hist or user_hist[-1]["query"] != query:
+        st.session_state.search_history.setdefault(uname, []).append(hist_entry)
 
     # --- Hero ---
     hero = results_p.iloc[0]
@@ -579,6 +666,8 @@ if query:
 
         for rank, (idx, row) in enumerate(items.iterrows(), 1):
             source_type = row.get('source_type', 'general')
+            dense_pct = int(row.get('dense_sim', 0) * 100)
+            bm25_pct = int(row.get('bm25_sim', 0) * 100)
             st.markdown(f"""
             <div class='result-row'>
                 <div class='result-rank'>{rank:02d}</div>
@@ -588,6 +677,8 @@ if query:
                     <div class='result-meta'>
                         <span class='relevance-tag'>{int(row['score']*100)}%</span>
                         <span class='source-badge'>{source_type}</span>
+                        <span class='source-badge'>Dense: {dense_pct}%</span>
+                        <span class='source-badge'>BM25: {bm25_pct}%</span>
                     </div>
                 </div>
             </div>
@@ -605,21 +696,30 @@ if query:
                 b1, b2 = st.columns(2)
                 if b1.button(":material/thumb_up:", key=f"{key_prefix}_up_{idx}"):
                     vec = st.session_state.engine.embeddings[row['id']]
-                    st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
-                        st.session_state.user_profiles[active_user["name"]], [vec], []
+                    st.session_state.user_profiles[uname] = st.session_state.engine.rocchio_update(
+                        st.session_state.user_profiles[uname], [vec], []
                     )
-                    # Track liked doc text for explainability
-                    if active_user["name"] not in st.session_state.liked_docs:
-                        st.session_state.liked_docs[active_user["name"]] = []
-                    st.session_state.liked_docs[active_user["name"]].append(row['content'])
+                    st.session_state.liked_docs.setdefault(uname, []).append(row['content'])
+                    st.session_state.liked_ids.setdefault(uname, []).append(int(row['id']))
+                    st.session_state.feedback_log.setdefault(uname, []).append(
+                        {"action": "like", "doc_id": int(row['id']), "time": datetime.now().isoformat()})
                     st.session_state.feedback_count += 1
+                    st.session_state.engine.save_profiles(
+                        st.session_state.user_profiles, st.session_state.user_prefs,
+                        st.session_state.liked_docs, st.session_state.feedback_log)
                     st.rerun()
                 if b2.button(":material/thumb_down:", key=f"{key_prefix}_dn_{idx}"):
                     vec = st.session_state.engine.embeddings[row['id']]
-                    st.session_state.user_profiles[active_user["name"]] = st.session_state.engine.rocchio_update(
-                        st.session_state.user_profiles[active_user["name"]], [], [vec]
+                    st.session_state.user_profiles[uname] = st.session_state.engine.rocchio_update(
+                        st.session_state.user_profiles[uname], [], [vec]
                     )
+                    st.session_state.disliked_ids.setdefault(uname, []).append(int(row['id']))
+                    st.session_state.feedback_log.setdefault(uname, []).append(
+                        {"action": "dislike", "doc_id": int(row['id']), "time": datetime.now().isoformat()})
                     st.session_state.feedback_count += 1
+                    st.session_state.engine.save_profiles(
+                        st.session_state.user_profiles, st.session_state.user_prefs,
+                        st.session_state.liked_docs, st.session_state.feedback_log)
                     st.rerun()
 
         # Show More
@@ -635,9 +735,41 @@ if query:
 
     render_result_list(results_b, "All results", "base")
 
+    # --- Evaluation Metrics ---
+    liked_set = set(st.session_state.liked_ids.get(uname, []))
+    if liked_set:
+        with st.expander("📈 Retrieval Evaluation Metrics"):
+            ranked_ids = results_p['id'].tolist()
+            p5 = st.session_state.engine.compute_precision_at_k(ranked_ids, liked_set, k=5)
+            p10 = st.session_state.engine.compute_precision_at_k(ranked_ids, liked_set, k=10)
+            mrr = st.session_state.engine.compute_mrr(ranked_ids, liked_set)
+            recall10 = st.session_state.engine.compute_recall_at_k(ranked_ids, liked_set, k=10)
+
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("P@5", f"{p5:.2f}")
+            m2.metric("P@10", f"{p10:.2f}")
+            m3.metric("MRR", f"{mrr:.2f}")
+            m4.metric("Recall@10", f"{recall10:.2f}")
+
+            # Track eval over time
+            st.session_state.eval_history.setdefault(uname, []).append(
+                {"P@5": p5, "P@10": p10, "MRR": mrr, "fb_count": st.session_state.feedback_count})
+            eval_hist = st.session_state.eval_history[uname]
+            if len(eval_hist) > 1:
+                fig2 = go.Figure()
+                fig2.add_trace(go.Scatter(y=[e["P@5"] for e in eval_hist], name="P@5",
+                                          mode='lines+markers', line=dict(color='#5046e5')))
+                fig2.add_trace(go.Scatter(y=[e["MRR"] for e in eval_hist], name="MRR",
+                                          mode='lines+markers', line=dict(color='#00c896')))
+                fig2.update_layout(height=250, title="Metrics Over Feedback Rounds",
+                                   paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                                   font=dict(color='#8888a4'), xaxis_title="Search Round",
+                                   xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#1a1a2e'))
+                st.plotly_chart(fig2, use_container_width=True)
+
     # Feedback count
     if st.session_state.feedback_count > 0:
-        st.markdown(f"<div class='feedback-bar'>{st.session_state.feedback_count} feedback signal(s) recorded for {active_user['name']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='feedback-bar'>{st.session_state.feedback_count} feedback signal(s) recorded for {uname}</div>", unsafe_allow_html=True)
 
 else:
     st.markdown("""

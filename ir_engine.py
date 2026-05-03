@@ -3,9 +3,13 @@ import pandas as pd
 import faiss
 from sentence_transformers import SentenceTransformer
 from datasets import load_dataset
+from rank_bm25 import BM25Okapi
+from sklearn.feature_extraction.text import TfidfVectorizer
 import os
 import re
+import json
 from collections import defaultdict
+from datetime import datetime
 
 # --- Topic keywords for classification ---
 TOPIC_KEYWORDS = {
@@ -53,6 +57,8 @@ class IREngine:
         self.documents = pd.DataFrame()
         self.embeddings = None
         self.index = None
+        self.bm25 = None          # BM25 sparse index
+        self.tfidf = None          # TF-IDF vectorizer for query expansion
 
         # Persistent storage
         self.storage_dir = "data"
@@ -61,6 +67,7 @@ class IREngine:
 
         self.data_cache_path = os.path.join(self.storage_dir, f"msmarco_{subset_size}.parquet")
         self.index_cache_path = os.path.join(self.storage_dir, f"msmarco_{subset_size}.index")
+        self.profiles_path = os.path.join(self.storage_dir, "user_profiles.json")
 
     def load_data(self):
         """Loads MS MARCO data, using Parquet cache if available."""
@@ -107,28 +114,105 @@ class IREngine:
             for i in range(self.index.ntotal):
                 self.embeddings[i] = self.index.reconstruct(i)
             print(f"Loaded {self.index.ntotal} vectors (dim={self.index.d})")
-            return
+        else:
+            print("Encoding embeddings (first-time setup)...")
+            texts = self.documents['content'].tolist()
 
-        print("Encoding embeddings (first-time setup)...")
+            all_embeddings = []
+            for start in range(0, len(texts), batch_size):
+                end = min(start + batch_size, len(texts))
+                batch = texts[start:end]
+                batch_emb = self.model.encode(batch, show_progress_bar=False)
+                all_embeddings.append(batch_emb)
+                print(f"  Encoded {end}/{len(texts)} passages...")
+
+            self.embeddings = np.vstack(all_embeddings).astype('float32')
+            faiss.normalize_L2(self.embeddings)
+
+            dimension = self.embeddings.shape[1]
+            self.index = faiss.IndexFlatIP(dimension)
+            self.index.add(self.embeddings)
+
+            faiss.write_index(self.index, self.index_cache_path)
+            print(f"Index built and saved to: {self.index_cache_path}")
+
+        # Always build BM25 + TF-IDF (fast, in-memory)
+        self._build_bm25_index()
+        self._build_tfidf()
+
+    # ------------------------------------------------------------------
+    #  BM25 Sparse Index
+    # ------------------------------------------------------------------
+
+    def _build_bm25_index(self):
+        """Build BM25 index from document contents for sparse keyword matching."""
+        print("Building BM25 index...")
         texts = self.documents['content'].tolist()
+        tokenized = [self._tokenize(doc) for doc in texts]
+        self.bm25 = BM25Okapi(tokenized)
+        print(f"BM25 index built over {len(texts)} documents")
 
-        all_embeddings = []
-        for start in range(0, len(texts), batch_size):
-            end = min(start + batch_size, len(texts))
-            batch = texts[start:end]
-            batch_emb = self.model.encode(batch, show_progress_bar=False)
-            all_embeddings.append(batch_emb)
-            print(f"  Encoded {end}/{len(texts)} passages...")
+    def _build_tfidf(self):
+        """Build TF-IDF vectorizer for query expansion keyword extraction."""
+        print("Fitting TF-IDF vectorizer...")
+        self.tfidf = TfidfVectorizer(max_features=10000, stop_words='english')
+        self.tfidf.fit(self.documents['content'].tolist())
+        print("TF-IDF vectorizer ready")
 
-        self.embeddings = np.vstack(all_embeddings).astype('float32')
-        faiss.normalize_L2(self.embeddings)
+    @staticmethod
+    def _tokenize(text):
+        """Simple whitespace + lowercase tokenizer for BM25."""
+        return re.sub(r'[^a-zA-Z0-9\s]', '', text.lower()).split()
 
-        dimension = self.embeddings.shape[1]
-        self.index = faiss.IndexFlatIP(dimension)
-        self.index.add(self.embeddings)
+    def bm25_scores(self, query):
+        """Get BM25 scores for all documents given a query."""
+        if self.bm25 is None:
+            return np.zeros(len(self.documents))
+        tokens = self._tokenize(query)
+        scores = self.bm25.get_scores(tokens)
+        # Normalize to [0, 1]
+        max_s = scores.max()
+        return scores / max_s if max_s > 0 else scores
 
-        faiss.write_index(self.index, self.index_cache_path)
-        print(f"Index built and saved to: {self.index_cache_path}")
+    # ------------------------------------------------------------------
+    #  Query Expansion
+    # ------------------------------------------------------------------
+
+    def expand_query(self, query, profile_vec, n_terms=5, n_neighbors=20):
+        """Expand query with terms from profile-similar documents using TF-IDF.
+        
+        Finds documents similar to the user's profile, extracts their top TF-IDF
+        terms, and appends the most relevant ones to the original query.
+        """
+        if profile_vec is None or np.linalg.norm(profile_vec) == 0:
+            return query
+        if self.tfidf is None:
+            return query
+
+        # Find documents most similar to the user's profile
+        profile_sims = np.dot(self.embeddings, profile_vec)
+        top_indices = np.argsort(profile_sims)[-n_neighbors:]
+        profile_docs = [self.documents.iloc[i]['content'] for i in top_indices]
+
+        # Extract top TF-IDF terms from those documents
+        tfidf_matrix = self.tfidf.transform(profile_docs)
+        feature_names = np.array(self.tfidf.get_feature_names_out())
+
+        # Average TF-IDF scores across profile-similar documents
+        avg_scores = np.asarray(tfidf_matrix.mean(axis=0)).flatten()
+
+        # Filter out terms already in the query
+        query_words = set(query.lower().split())
+        candidates = []
+        for idx in np.argsort(avg_scores)[::-1]:
+            term = feature_names[idx]
+            if term not in query_words and len(term) > 2:
+                candidates.append(term)
+            if len(candidates) >= n_terms:
+                break
+
+        expanded = query + " " + " ".join(candidates)
+        return expanded
 
     def get_embedding(self, text):
         """Get a normalized embedding vector for a text string."""
@@ -217,11 +301,40 @@ class IREngine:
     # ------------------------------------------------------------------
 
     def search(self, query, profile_vec=None, personalization_weight=0.5,
-               preferred_sources=None, recency_weight=0.0, source_weight=0.0):
-        """Search with multi-signal scoring: query sim + profile sim + source boost + recency."""
-        q_vec = self.get_embedding(query)
+               preferred_sources=None, recency_weight=0.0, source_weight=0.0,
+               dense_weight=0.7, use_bm25=True, expand=False):
+        """Search with multi-signal scoring: dense + BM25 + profile + source + recency.
+        
+        Args:
+            query: Search query string
+            profile_vec: User profile embedding vector
+            personalization_weight: Weight for profile similarity (0-1)
+            preferred_sources: List of preferred source types for boosting
+            recency_weight: Weight for recency boost (0-0.15)
+            source_weight: Weight for source type boost
+            dense_weight: Blend between dense (1.0) and BM25 (0.0) for base relevance
+            use_bm25: Whether to include BM25 in scoring
+            expand: Whether to apply query expansion using profile
+        """
+        # Optionally expand query with profile-derived terms
+        effective_query = query
+        expansion_terms = []
+        if expand and profile_vec is not None:
+            effective_query = self.expand_query(query, profile_vec)
+            expansion_terms = effective_query.replace(query, "").strip().split()
 
-        query_sims = np.dot(self.embeddings, q_vec)
+        q_vec = self.get_embedding(effective_query)
+
+        # Dense similarity
+        dense_sims = np.dot(self.embeddings, q_vec)
+
+        # BM25 sparse similarity
+        bm25_sims = np.zeros(len(self.documents))
+        if use_bm25 and self.bm25 is not None:
+            bm25_sims = self.bm25_scores(effective_query)
+
+        # Hybrid base relevance: blend dense + BM25
+        query_sims = dense_weight * dense_sims + (1.0 - dense_weight) * bm25_sims
 
         # Profile similarity
         profile_sims = np.zeros(len(self.documents))
@@ -252,11 +365,13 @@ class IREngine:
         results = self.documents.copy()
         results['score'] = scores
         results['query_sim'] = query_sims
+        results['dense_sim'] = dense_sims
+        results['bm25_sim'] = bm25_sims
         results['profile_sim'] = profile_sims
         results['source_boost'] = source_boosts
         results['recency_boost'] = recency_scores
 
-        return results.sort_values('score', ascending=False)
+        return results.sort_values('score', ascending=False), expansion_terms
 
     # ------------------------------------------------------------------
     #  Explainability
@@ -320,3 +435,85 @@ class IREngine:
 
         norm = np.linalg.norm(new_profile)
         return new_profile / norm if norm > 0 else new_profile
+
+    # ------------------------------------------------------------------
+    #  Profile Persistence
+    # ------------------------------------------------------------------
+
+    def save_profiles(self, user_profiles, user_prefs, liked_docs, feedback_log=None):
+        """Save user profiles, preferences, liked docs, and feedback log to disk as JSON."""
+        data = {
+            "profiles": {name: vec.tolist() for name, vec in user_profiles.items()},
+            "prefs": user_prefs,
+            "liked_docs": liked_docs,
+            "feedback_log": feedback_log or {},
+            "saved_at": datetime.now().isoformat(),
+        }
+        with open(self.profiles_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    def load_profiles(self):
+        """Load user profiles from disk. Returns (profiles_dict, prefs_dict, liked_docs, feedback_log) or None."""
+        if not os.path.exists(self.profiles_path):
+            return None
+        try:
+            with open(self.profiles_path, 'r') as f:
+                data = json.load(f)
+            profiles = {name: np.array(vec, dtype='float32') for name, vec in data.get("profiles", {}).items()}
+            prefs = data.get("prefs", {})
+            liked_docs = data.get("liked_docs", {})
+            feedback_log = data.get("feedback_log", {})
+            return profiles, prefs, liked_docs, feedback_log
+        except (json.JSONDecodeError, KeyError):
+            return None
+
+    # ------------------------------------------------------------------
+    #  Evaluation Metrics
+    # ------------------------------------------------------------------
+
+    def compute_precision_at_k(self, ranked_doc_ids, relevant_ids, k=10):
+        """Compute Precision@K: fraction of top-K results that are relevant.
+        
+        Uses liked document IDs as the relevance set.
+        """
+        if not relevant_ids or k == 0:
+            return 0.0
+        top_k = ranked_doc_ids[:k]
+        relevant_in_top_k = sum(1 for doc_id in top_k if doc_id in relevant_ids)
+        return relevant_in_top_k / k
+
+    def compute_mrr(self, ranked_doc_ids, relevant_ids):
+        """Compute Mean Reciprocal Rank: 1/rank of first relevant result.
+        
+        Uses liked document IDs as the relevance set.
+        """
+        if not relevant_ids:
+            return 0.0
+        for rank, doc_id in enumerate(ranked_doc_ids, 1):
+            if doc_id in relevant_ids:
+                return 1.0 / rank
+        return 0.0
+
+    def compute_recall_at_k(self, ranked_doc_ids, relevant_ids, k=10):
+        """Compute Recall@K: fraction of relevant docs found in top-K."""
+        if not relevant_ids or k == 0:
+            return 0.0
+        top_k = ranked_doc_ids[:k]
+        found = sum(1 for doc_id in top_k if doc_id in relevant_ids)
+        return found / len(relevant_ids)
+
+    def evaluate(self, query, profile_vec, relevant_ids, **search_kwargs):
+        """Run a full evaluation: search + compute P@5, P@10, MRR, Recall@10.
+        
+        Returns dict of metrics.
+        """
+        results, _ = self.search(query, profile_vec=profile_vec, **search_kwargs)
+        ranked_ids = results['id'].tolist()
+        rel_set = set(relevant_ids)
+
+        return {
+            "P@5": self.compute_precision_at_k(ranked_ids, rel_set, k=5),
+            "P@10": self.compute_precision_at_k(ranked_ids, rel_set, k=10),
+            "MRR": self.compute_mrr(ranked_ids, rel_set),
+            "Recall@10": self.compute_recall_at_k(ranked_ids, rel_set, k=10),
+        }

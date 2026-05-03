@@ -164,41 +164,150 @@ Example output:
 | Source type detection + badges | Done |
 | Multi-user profiles (5 users) | Done |
 | Row-based result layout with Show More pagination | Done |
+| **BM25 Hybrid Scoring (sparse + dense)** | **Done** |
+| **Query Expansion via profile vectors + TF-IDF** | **Done** |
+| **Profile Persistence (JSON on disk)** | **Done** |
+| **Personalization Weight Slider (real-time control)** | **Done** |
+| **Search Analytics Dashboard (topic affinity chart, profile strength)** | **Done** |
+| **Query History & Session Logging** | **Done** |
+| **Evaluation Metrics (P@5, P@10, MRR, Recall@10)** | **Done** |
 
 ---
 
-## 5. Future Scope
+## 5. New Features (Detailed)
 
-### 5.1 Short-Term
+### 5.1 BM25 Hybrid Scoring
 
-- **BM25 hybrid scoring**: Combine dense retrieval with sparse keyword matching (BM25/TF-IDF)
-- **Query expansion**: Use profile vector to expand queries before retrieval
-- **Evaluation metrics**: Compute precision, recall, nDCG, MAP against MS MARCO relevance labels
-- **Configurable personalization slider**: Let users adjust the personalization weight `w_p` in real-time
-- **Feedback persistence**: Save/load user profiles and preferences to disk (JSON/pickle) across sessions
+The system now combines **dense retrieval** (SentenceTransformer embeddings + FAISS cosine similarity) with **sparse retrieval** (BM25 Okapi term-frequency scoring). The hybrid formula is:
 
-### 5.2 Medium-Term
+```
+base_relevance = α × dense_sim + (1 − α) × bm25_sim
+```
 
-- **Click-through implicit feedback**: Treat result clicks as positive signals without explicit thumbs up
-- **Larger dataset support**: FAISS IVF or HNSW indexes for approximate search on 50k–500k passages
-- **Query suggestions**: Auto-suggest based on user profile similarity to a query log
-- **A/B comparison mode**: Side-by-side personalized vs. baseline for the same query
+Where `α` (dense weight) is user-controllable via a sidebar slider (default 0.7). This captures both semantic similarity and exact keyword matching, which is the gold standard in modern IR systems.
+
+- BM25 index is built in-memory on every startup (fast, ~1 second for 5K docs)
+- Scores are normalized to [0, 1] before blending
+- Each result row shows both Dense% and BM25% breakdown badges
+
+### 5.2 Query Expansion
+
+When enabled, the system **automatically expands queries** with terms derived from the user's interest profile:
+
+1. Find top-N documents most similar to the user's profile vector
+2. Extract their highest-scoring TF-IDF terms
+3. Filter out terms already present in the query
+4. Append top-5 expansion terms to the query before retrieval
+
+This improves recall for users with established profiles. Expansion terms are displayed in a banner above results.
+
+### 5.3 Profile Persistence
+
+User profiles, preferences, liked documents, and feedback logs are now **saved to disk as JSON** (`data/user_profiles.json`):
+
+- **Auto-save**: Triggers after every questionnaire submission and every feedback action
+- **Auto-load**: On app startup, previously saved profiles are restored
+- **Format**: JSON with numpy arrays serialized as lists
+
+### 5.4 Real-Time Personalization Controls
+
+A sidebar panel provides three controls:
+
+| Control | Range | Default | Effect |
+|---|---|---|---|
+| Personalization Weight | 0.0 – 1.0 | 0.5 | How much profile similarity affects ranking |
+| Dense vs BM25 Blend | 0.0 – 1.0 | 0.7 | Balance between semantic and keyword scoring |
+| Query Expansion | On/Off | Off | Toggles profile-based query expansion |
+
+### 5.5 Search Analytics Dashboard
+
+The sidebar displays a live analytics panel:
+
+- **Profile Strength Indicator**: Progress bar showing profile vector magnitude (0–100%)
+- **Topic Affinity Chart**: Horizontal bar chart (Plotly) showing cosine similarity between the user's profile and each topic embedding
+- **Feedback Counters**: Total likes and dislikes as metric cards
+- **Recent Searches**: Last 5 queries displayed with timestamps
+
+### 5.6 Query History & Session Logging
+
+Every search is logged with:
+
+```json
+{"query": "...", "time": "ISO timestamp", "topics": ["Tech", "Health"]}
+```
+
+Every feedback action is logged with:
+
+```json
+{"action": "like/dislike", "doc_id": 42, "time": "ISO timestamp"}
+```
+
+These logs persist across sessions via the profile persistence system.
+
+### 5.7 Evaluation Metrics
+
+After providing feedback, an expandable "Retrieval Evaluation Metrics" panel appears showing:
+
+| Metric | Formula | Description |
+|---|---|---|
+| P@5 | relevant_in_top5 / 5 | Precision at rank 5 |
+| P@10 | relevant_in_top10 / 10 | Precision at rank 10 |
+| MRR | 1 / rank_of_first_relevant | Mean Reciprocal Rank |
+| Recall@10 | found_in_top10 / total_relevant | Recall at rank 10 |
+
+Liked documents serve as the relevance set. A Plotly line chart tracks how P@5 and MRR evolve across successive search rounds, demonstrating the adaptive improvement over time.
+
+---
+
+## 6. Updated Architecture
+
+```
+┌──────────────────────┐     ┌──────────────────────────────┐     ┌────────────────┐
+│  Streamlit UI        │────▶│     IREngine Core             │────▶│  FAISS Index   │
+│  (app.py)            │◀────│   (ir_engine.py)              │◀────│ (IndexFlatIP)  │
+│                      │     │                               │     └────────────────┘
+│ • User Selection     │     │ • SentenceTransformer         │
+│ • Questionnaire      │     │ • Topic Classification        │     ┌────────────────┐
+│ • Sidebar Controls   │     │ • Source Detection             │────▶│  Disk Cache    │
+│ • Search + Expansion │     │ • Mismatch Detection           │     │  (Parquet +    │
+│ • Feedback (👍👎)    │     │ • Multi-Signal Scoring         │     │   FAISS .index)│
+│ • Explainability     │     │ • BM25 Hybrid Scoring          │     └────────────────┘
+│ • Analytics Panel    │     │ • Query Expansion (TF-IDF)     │
+│ • Eval Metrics       │     │ • Profile Persistence (JSON)   │     ┌────────────────┐
+│ • Search History     │     │ • Evaluation Metrics           │────▶│ User Profiles  │
+│                      │     │ • Rocchio Feedback              │     │ (JSON on disk) │
+└──────────────────────┘     └──────────────────────────────┘     └────────────────┘
+```
+
+---
+
+## 7. Future Scope
+
+### 7.1 Short-Term
+
+- **Click-through implicit feedback**: Treat result clicks as positive signals
 - **Temporal decay**: Weight recent feedback more heavily than older feedback
+- **A/B comparison mode**: Side-by-side personalized vs. baseline for the same query
 
-### 5.3 Long-Term / Research
+### 7.2 Medium-Term
 
-- **Learning-to-rank**: Replace linear blending with LambdaMART or a neural ranker
-- **Collaborative filtering**: Cross-user recommendations (users who liked X also liked Y)
-- **Fine-tuned embeddings**: Fine-tune the embedding model on MS MARCO relevance judgments
+- **Larger dataset support**: FAISS IVF or HNSW indexes for 50k–500k passages
+- **Query suggestions**: Auto-suggest based on profile similarity
+- **Learning-to-rank**: Replace linear blending with LambdaMART or neural ranker
+
+### 7.3 Long-Term / Research
+
+- **Collaborative filtering**: Cross-user recommendations
+- **Fine-tuned embeddings**: Fine-tune on MS MARCO relevance judgments
 - **Multi-modal retrieval**: Support image/table retrieval alongside text
-- **Real metadata**: Integrate actual timestamps and source URLs for genuine recency/source scoring
 
 ---
 
-## 6. References
+## 8. References
 
 1. Tri Nguyen et al., "MS MARCO: A Human Generated MAchine Reading COmprehension Dataset," 2016
 2. J.J. Rocchio, "Relevance Feedback in Information Retrieval," in SMART Retrieval System, 1971
 3. N. Reimers and I. Gurevych, "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks," EMNLP 2019
 4. J. Johnson, M. Douze, H. Jégou, "Billion-scale similarity search with GPUs," IEEE Trans. Big Data, 2019
 5. C. Manning, P. Raghavan, H. Schütze, "Introduction to Information Retrieval," Cambridge University Press, 2008
+6. S. Robertson and H. Zaragoza, "The Probabilistic Relevance Framework: BM25 and Beyond," Foundations and Trends in IR, 2009
