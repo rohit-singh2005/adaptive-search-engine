@@ -428,7 +428,7 @@ AVOID_OPTIONS = ["Politics", "Gossip", "Ads"]
 if 'engine' not in st.session_state:
     with st.status("Initializing engine...", expanded=True) as status:
         st.write("Loading IR Engine...")
-        engine = IREngine(subset_size=5000)
+        engine = IREngine(subset_size=50000)
         st.write("Loading MS MARCO data...")
         engine.load_data()
         st.write("Building vector index + BM25...")
@@ -751,7 +751,7 @@ with st.sidebar:
 
 # --- Search area ---
 st.markdown("<div class='search-title'>Adaptive Search Engine</div>", unsafe_allow_html=True)
-st.markdown("<div class='search-subtitle'>Results personalize as you provide relevance feedback</div>", unsafe_allow_html=True)
+st.markdown("<div class='search-subtitle' style='text-align: center;'>An information retrieval system that learns from your behavior to deliver personalized, explainable search results over the MS MARCO corpus.</div>", unsafe_allow_html=True)
 
 _, center_col, _ = st.columns([1, 3, 1])
 with center_col:

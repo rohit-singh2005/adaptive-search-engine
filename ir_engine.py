@@ -51,7 +51,7 @@ SOURCE_KEYWORDS = {
 
 
 class IREngine:
-    def __init__(self, model_name='all-MiniLM-L6-v2', subset_size=5000):
+    def __init__(self, model_name='all-MiniLM-L6-v2', subset_size=50000):
         self.model = SentenceTransformer(model_name)
         self.subset_size = subset_size
         self.documents = pd.DataFrame()
