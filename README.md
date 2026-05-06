@@ -236,10 +236,3 @@ See [`methodology.md`](./methodology.md) for a comprehensive technical write-up 
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">Built with ❤️ using Streamlit, FAISS, and SentenceTransformers</p>
